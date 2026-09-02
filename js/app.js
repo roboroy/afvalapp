@@ -9,6 +9,7 @@ import {
   todayISO, addDays, fromISO, monthLong, weekdayLong,
   fmtKg, fmtDelta, fmtDateLong, fmtDateShort,
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
+  trendWeight, trendAgo, hasTrend, forecast, currentStreak,
 } from './store.js';
 
 import { renderChart } from './charts.js';
@@ -109,21 +110,42 @@ function renderToday() {
   const entries = listEntries();
   const last = entries[entries.length - 1] || null;
 
-  /* hero */
-  $('heroWeight').textContent = last ? fmtKg(last.kg) : '—';
+  /* hero — het trendgewicht staat voorop zodra dat betekenis heeft */
   const deltaEl = $('heroDelta');
-  if (entries.length >= 2) {
+  const toonTrend = hasTrend(entries);
+  const trend = toonTrend ? trendWeight(entries) : null;
+
+  $('heroLabel').textContent = toonTrend ? 'Trendgewicht' : 'Huidig gewicht';
+  $('heroWeight').textContent = toonTrend ? fmtKg(trend) : (last ? fmtKg(last.kg) : '—');
+
+  if (toonTrend) {
+    // Trend versus trend van een week terug: dat filtert de dagruis eruit.
+    const eerder = trendAgo(entries, 7);
+    if (eerder !== null) {
+      const d = trend - eerder;
+      deltaEl.textContent = `${fmtDelta(d)} kg in 7 dagen`;
+      setDeltaClass(deltaEl, d);
+    } else {
+      deltaEl.textContent = '';
+      setDeltaClass(deltaEl, null);
+    }
+    $('heroNote').textContent = 'Gemiddelde over 7 dagen — dempt dagelijkse schommelingen.';
+    $('heroDate').textContent = `Meting ${fmtDateShort(last.date)}: ${fmtKg(last.kg)} kg`;
+  } else if (entries.length >= 2) {
     const prev = entries[entries.length - 2];
     const d = last.kg - prev.kg;
     deltaEl.textContent = `${fmtDelta(d)} kg sinds ${fmtDateShort(prev.date)}`;
     setDeltaClass(deltaEl, d);
+    $('heroNote').textContent = 'Vanaf drie metingen toont de app je trendgewicht.';
+    $('heroDate').textContent = `Laatste meting: ${fmtDateLong(last.date)}`;
   } else {
     deltaEl.textContent = '';
     setDeltaClass(deltaEl, null);
+    $('heroNote').textContent = '';
+    $('heroDate').textContent = last
+      ? `Laatste meting: ${fmtDateLong(last.date)}`
+      : 'Nog geen meting — vul hieronder je gewicht in.';
   }
-  $('heroDate').textContent = last
-    ? `Laatste meting: ${fmtDateLong(last.date)}`
-    : 'Nog geen meting — vul hieronder je gewicht in.';
 
   /* doel */
   const goalCard = $('goalCard');
@@ -131,18 +153,21 @@ function renderToday() {
   const start = settings.startWeight ?? (entries.length ? entries[0].kg : null);
   if (goal !== null && start !== null && last) {
     goalCard.hidden = false;
+    const peil = toonTrend ? trend : last.kg;    // trend is een eerlijker peilstok
     const total = start - goal;
-    const done = start - last.kg;
+    const done = start - peil;
     const pct = total === 0 ? 100 : Math.max(0, Math.min(100, (done / total) * 100));
     $('goalFill').style.width = `${pct}%`;
     $('goalBar').setAttribute('aria-valuenow', Math.round(pct));
     $('goalStart').textContent = `${fmtKg(start)} kg`;
     $('goalTarget').textContent = `${fmtKg(goal)} kg`;
     $('goalPct').textContent = `${Math.round(pct)}%`;
-    const left = last.kg - goal;
+    const left = peil - goal;
     $('goalRemaining').textContent = left <= 0
       ? 'Doel gehaald! 🎉'
       : `nog ${fmtKg(left)} kg te gaan`;
+
+    renderForecast(entries, goal);
   } else {
     goalCard.hidden = true;
   }
@@ -168,10 +193,38 @@ function renderToday() {
     setDeltaClass(tEl, null);
   }
 
-  $('statCount').textContent = String(entries.length);
+  const streak = currentStreak(entries, settings.reminderFrequency);
+  $('statStreakLabel').textContent = streak.unit === 'week' ? 'Weken op rij' : 'Dagen op rij';
+  $('statStreak').textContent = String(streak.count);
 
   /* hint bij het formulier */
   syncFormHint();
+}
+
+/** Zet de prognoseregel onder de voortgangsbalk. */
+function renderForecast(entries, goal) {
+  const el = $('goalForecast');
+  const f = forecast(entries, goal);
+  const tempo = f.rate === null ? null : `${fmtDelta(f.rate)} kg per week`;
+
+  if (f.status === 'ok') {
+    // Alleen de datum noemen. Er ook "over N weken" bij zetten leest prettig,
+    // maar die afronding klopt zichtbaar niet met de datum als je narekent.
+    el.innerHTML = f.weeks <= 1
+      ? `Tempo <strong>${tempo}</strong>. Bij dit tempo zit je binnen een week op je doel.`
+      : `Tempo <strong>${tempo}</strong>. Bij dit tempo zit je rond ` +
+        `<strong>${fmtDateLong(f.eta)}</strong> op je doel.`;
+  } else if (f.status === 'doel-gehaald') {
+    el.textContent = 'Je zit op of onder je streefgewicht. Mooi gedaan.';
+  } else if (f.status === 'geen-daling') {
+    el.innerHTML = `Tempo <strong>${tempo}</strong>. Je gewicht daalt op dit moment niet, ` +
+                   `dus een datum voor je doel valt nog niet te geven.`;
+  } else if (f.status === 'te-ver-weg') {
+    el.innerHTML = `Tempo <strong>${tempo}</strong>. In dit tempo duurt je doel nog jaren — ` +
+                   `misschien is een tussendoel handiger.`;
+  } else {
+    el.textContent = 'Na twee weken meten kan de app voorspellen wanneer je je doel haalt.';
+  }
 }
 
 /* ── Invoerformulier ────────────────────────────────────────── */
@@ -517,6 +570,7 @@ for (const btn of freqButtons) {
     // Een nieuwe frequentie mag de herinnering van vandaag opnieuw laten gelden.
     settings = patchSettings({ lastReminderDate: null });
     await refreshReminderState();
+    renderToday();          // 'dagen op rij' wordt 'weken op rij'
     toast(`Herinnering: ${reminderPhrase()}`);
   });
 }

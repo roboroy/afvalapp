@@ -184,7 +184,12 @@ body {
 .hero__delta.is-down { color: var(--down); background: var(--accent-soft); }
 .hero__delta.is-up   { color: var(--up);   background: var(--danger-soft); }
 .hero__delta:empty { display: none; }
-.hero__date { margin-top: 8px; font-size: .8rem; color: var(--text-faint); }
+.hero__note {
+  margin-top: 7px; font-size: .74rem; color: var(--text-faint);
+  line-height: 1.35; max-width: 30ch; margin-left: auto; margin-right: auto;
+}
+.hero__note:empty { display: none; }
+.hero__date { margin-top: 6px; font-size: .8rem; color: var(--text-faint); }
 
 /* ── Goal ──────────────────────────────────────────────────── */
 .goal__head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 10px; }
@@ -206,6 +211,14 @@ body {
   font-variant-numeric: tabular-nums;
 }
 .goal__pct { font-weight: 700; color: var(--text-soft); }
+
+.goal__forecast {
+  margin: 11px 0 0; padding-top: 11px;
+  border-top: 1px solid var(--border);
+  font-size: .82rem; line-height: 1.45; color: var(--text-soft);
+}
+.goal__forecast:empty { display: none; }
+.goal__forecast strong { color: var(--text); font-weight: 650; }
 
 /* ── Forms ─────────────────────────────────────────────────── */
 .form { display: flex; flex-direction: column; gap: 14px; }

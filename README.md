@@ -4,10 +4,37 @@ Een webapp om je gewicht bij te houden. Werkt offline, staat als icoon op je
 beginscherm en heeft geen account, server of database nodig — al je metingen
 staan in de opslag van je eigen browser.
 
-- **Vandaag** — gewicht invullen, huidig gewicht, verschil met vorige meting, voortgang naar je doel
+- **Vandaag** — gewicht invullen, je trendgewicht, voortgang naar je doel met een
+  prognose wanneer je het haalt, en hoeveel dagen op rij je gemeten hebt
 - **Grafiek** — verloop per **dag**, **week**, **maand** en **jaar**, met een 7-daags gemiddelde en je streefgewicht als stippellijn
 - **Historie** — alle metingen per maand, aantikken om te wijzigen, kruisje om te verwijderen
 - **Instellingen** — start- en streefgewicht, lengte (BMI), dagelijkse herinnering, back-up en export
+
+---
+
+## Het trendgewicht
+
+Het grote getal op het beginscherm is niet je laatste meting, maar het
+gemiddelde van de afgelopen zeven dagen. Dat is bewust.
+
+Je gewicht schommelt van dag tot dag met een kilo of meer door vocht, zout en
+wat er nog in je darmen zit. Dat heeft niets met vet te maken. Stuur je op die
+rauwe cijfers, dan schrik je van een slechte ochtend en word je te blij van een
+goede. Het weekgemiddelde laat zien wat er werkelijk gebeurt. Je meting van
+vandaag staat er gewoon onder.
+
+Vanaf drie metingen schakelt de app over op het trendgewicht; daarvoor toont
+hij je laatste meting.
+
+De **prognose** onder de voortgangsbalk trekt een rechte lijn door je
+trendwaarden van de afgelopen vier weken en rekent uit wanneer je op je doel
+zit. Hij zegt bewust niets zolang je minder dan twee weken of minder dan vijf
+keer gemeten hebt, en ook niet als je gewicht stilstaat of stijgt — een datum
+noemen zou dan schijnnauwkeurigheid zijn.
+
+**Dagen op rij** telt hoe lang je het volhoudt. De reeks breekt niet doordat je
+vandaag nog niet op de weegschaal hebt gestaan; de dag is immers nog bezig. Staat
+je herinnering op wekelijks, dan telt de app weken in plaats van dagen.
 
 ---
 

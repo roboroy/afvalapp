@@ -32,11 +32,12 @@
     <h2 id="today-h" class="sr-only">Vandaag</h2>
 
     <div class="hero card">
-      <div class="hero__label">Huidig gewicht</div>
+      <div class="hero__label" id="heroLabel">Huidig gewicht</div>
       <div class="hero__value">
         <span id="heroWeight">—</span><span class="hero__unit">kg</span>
       </div>
       <div id="heroDelta" class="hero__delta"></div>
+      <div id="heroNote" class="hero__note"></div>
       <div id="heroDate" class="hero__date"></div>
     </div>
 
@@ -53,6 +54,7 @@
         <span id="goalPct" class="goal__pct"></span>
         <span id="goalTarget">—</span>
       </div>
+      <p id="goalForecast" class="goal__forecast"></p>
     </div>
 
     <form id="entryForm" class="card form" autocomplete="off">
@@ -96,8 +98,8 @@
         <div class="stat__value" id="statTotal">—</div>
       </div>
       <div class="stat card">
-        <div class="stat__label">Metingen</div>
-        <div class="stat__value" id="statCount">—</div>
+        <div class="stat__label" id="statStreakLabel">Dagen op rij</div>
+        <div class="stat__value" id="statStreak">—</div>
       </div>
     </div>
   </section>

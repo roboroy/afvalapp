@@ -230,6 +230,155 @@ export function movingAverage(entries, days = 7) {
   return out;
 }
 
+/* ── Trend, tempo en prognose ───────────────────────────────── */
+
+/**
+ * Het trendgewicht: het 7-daags gemiddelde op de laatste meting.
+ * Je dagelijkse gewicht schommelt met vocht en voeding; deze lijn laat
+ * zien wat er werkelijk gebeurt.
+ */
+export function trendWeight(entries, days = 7) {
+  if (!entries.length) return null;
+  const avg = movingAverage(entries, days);
+  return avg.get(entries[entries.length - 1].date) ?? null;
+}
+
+/** Het trendgewicht zoals het `daysAgo` dagen geleden was. */
+export function trendAgo(entries, daysAgo, days = 7) {
+  if (entries.length < 2) return null;
+  const cutoff = addDays(entries[entries.length - 1].date, -daysAgo);
+  let ref = null;
+  for (const e of entries) {
+    if (e.date <= cutoff) ref = e;
+    else break;
+  }
+  if (!ref) return null;
+  const avg = movingAverage(entries, days);
+  return avg.get(ref.date) ?? null;
+}
+
+/** Is er genoeg gemeten om van een trend te mogen spreken? */
+export function hasTrend(entries) {
+  return entries.length >= 3 &&
+         daysBetween(entries[0].date, entries[entries.length - 1].date) >= 2;
+}
+
+/**
+ * Tempo in kilo per week, via een rechte lijn door de trendwaarden van de
+ * afgelopen `windowDays` dagen. Negatief betekent afvallen.
+ * Geeft null als er te weinig of te kort gemeten is om iets te beweren.
+ */
+export function weeklyRate(entries, windowDays = 28) {
+  if (entries.length < 5) return null;
+
+  const last = entries[entries.length - 1].date;
+
+  // De eerste zes dagen van je hele reeks hebben nog geen volledig 7-daags
+  // gemiddelde achter zich. Die punten trekken de lijn kunstmatig vlak, dus
+  // die laten we buiten de berekening — tenzij er dan te weinig overblijft.
+  const opgewarmd = addDays(entries[0].date, 6);
+  const venster = addDays(last, -(windowDays - 1));
+
+  let sel = entries.filter((e) => e.date >= venster && e.date >= opgewarmd);
+  if (sel.length < 5 || daysBetween(sel[0].date, sel[sel.length - 1].date) < 14) {
+    sel = entries.filter((e) => e.date >= venster);
+  }
+
+  if (sel.length < 5) return null;
+  if (daysBetween(sel[0].date, sel[sel.length - 1].date) < 14) return null;
+
+  const avg = movingAverage(entries, 7);
+  const pts = sel
+    .map((e) => ({ x: daysBetween(sel[0].date, e.date), y: avg.get(e.date) }))
+    .filter((pt) => typeof pt.y === 'number');
+  if (pts.length < 5) return null;
+
+  const n = pts.length;
+  const sx  = pts.reduce((a, pt) => a + pt.x, 0);
+  const sy  = pts.reduce((a, pt) => a + pt.y, 0);
+  const sxx = pts.reduce((a, pt) => a + pt.x * pt.x, 0);
+  const sxy = pts.reduce((a, pt) => a + pt.x * pt.y, 0);
+
+  const noemer = n * sxx - sx * sx;
+  if (noemer === 0) return null;
+
+  return ((n * sxy - sx * sy) / noemer) * 7;   // kg per dag → kg per week
+}
+
+/**
+ * Wanneer haal je je streefgewicht bij het huidige tempo?
+ * @returns {{status: string, rate: number|null, eta: string|null, weeks: number|null}}
+ *   status: 'ok' | 'te-weinig-data' | 'doel-gehaald' | 'geen-daling' | 'te-ver-weg'
+ */
+export function forecast(entries, goal) {
+  const leeg = { status: 'te-weinig-data', rate: null, eta: null, weeks: null };
+  if (goal === null || goal === undefined || !entries.length) return leeg;
+
+  const huidig = trendWeight(entries);
+  if (huidig === null) return leeg;
+
+  if (huidig - goal <= 0) {
+    return { status: 'doel-gehaald', rate: weeklyRate(entries), eta: null, weeks: null };
+  }
+
+  const rate = weeklyRate(entries);
+  if (rate === null) return leeg;
+
+  // Minder dan 50 gram per week is binnen de ruis; daar valt niets op te
+  // baseren zonder een misleidend precieze datum te suggereren.
+  if (rate >= -0.05) return { status: 'geen-daling', rate, eta: null, weeks: null };
+
+  const weeks = (huidig - goal) / -rate;
+  if (weeks > 260) return { status: 'te-ver-weg', rate, eta: null, weeks };
+
+  return { status: 'ok', rate, weeks, eta: addDays(todayISO(), Math.round(weeks * 7)) };
+}
+
+/* ── Weegritme ──────────────────────────────────────────────── */
+
+/**
+ * Hoeveel dagen (of weken) op rij is er gemeten, tot en met nu.
+ * De reeks breekt niet omdat je vandaag nog niet op de weegschaal stond —
+ * de dag is immers nog bezig.
+ */
+export function currentStreak(entries, frequency = 'daily') {
+  const unit = frequency === 'weekly' ? 'week' : 'dag';
+  if (!entries.length) return { count: 0, unit };
+
+  if (frequency === 'weekly') {
+    const key = (iso) => {
+      const { year, week } = isoWeekOf(fromISO(iso));
+      return `${year}-W${String(week).padStart(2, '0')}`;
+    };
+    const weken = new Set(entries.map((e) => key(e.date)));
+
+    let cursor = todayISO();
+    if (!weken.has(key(cursor))) {
+      cursor = addDays(cursor, -7);                 // deze week nog niet, vorige telt nog
+      if (!weken.has(key(cursor))) return { count: 0, unit };
+    }
+    let count = 0;
+    while (weken.has(key(cursor))) {
+      count++;
+      cursor = addDays(cursor, -7);
+    }
+    return { count, unit };
+  }
+
+  const dagen = new Set(entries.map((e) => e.date));
+  let cursor = todayISO();
+  if (!dagen.has(cursor)) {
+    cursor = addDays(cursor, -1);                   // vandaag mag nog
+    if (!dagen.has(cursor)) return { count: 0, unit };
+  }
+  let count = 0;
+  while (dagen.has(cursor)) {
+    count++;
+    cursor = addDays(cursor, -1);
+  }
+  return { count, unit };
+}
+
 /* ── Aggregatie per periode ─────────────────────────────────── */
 
 function bucketize(entries, keyFn, labelFn, subFn) {
