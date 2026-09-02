@@ -51,7 +51,7 @@ export async function showReminder(body = 'Tijd om je gewicht in te vullen.') {
       badge: 'icons/icon-192.png',
       lang: 'nl',
       requireInteraction: false,
-      data: { url: './' },
+      data: { url: './?quick=1' },
     });
     return true;
   } catch {

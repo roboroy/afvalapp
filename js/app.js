@@ -804,6 +804,9 @@ if ('serviceWorker' in navigator) {
 
   navigator.serviceWorker.addEventListener('message', (e) => {
     if (e.data?.type === 'reminder-check') onReminderFires();
+    // Melding aangetikt terwijl de app al openstond: er komt dan geen
+    // nieuwe navigatie, dus de service worker seint het ons door.
+    if (e.data?.type === 'quick-entry') startQuickEntry();
   });
 }
 
@@ -824,7 +827,56 @@ window.addEventListener('resize', () => {
   if (!$('view-chart').hidden) renderChartView();
 });
 
+/**
+ * Zet de cursor in het gewichtsveld en scrolt het in beeld.
+ * Android opent het toetsenbord niet vanzelf bij focus zonder aanraking —
+ * het veld staat dan wel klaar en in beeld, één tik en je typt.
+ */
+function startQuickEntry() {
+  showView('today');
+  loadDateIntoForm(todayISO());
+
+  const input = $('entryWeight');
+
+  // Pas positioneren als de pagina echt klaar is. Eerder werkt niet: de
+  // browser herstelt na het laden nog zijn eigen scrollpositie en gooit
+  // ons werk daarmee weg.
+  // Geen requestAnimationFrame: die staat stil zolang het venster niet
+  // zichtbaar is, en dan gebeurt er dus niets. Een timer draait altijd.
+  const plaats = () => setTimeout(() => {
+    input.scrollIntoView({ block: 'center' });
+    input.focus({ preventScroll: true });
+    input.select?.();
+  }, 0);
+
+  if (document.readyState === 'complete') plaats();
+  else window.addEventListener('load', plaats, { once: true });
+}
+
+/** Snelkoppelingen en meldingen kunnen de app op een bepaald scherm openen. */
+function handleLaunchParams() {
+  const params = new URLSearchParams(location.search);
+  const view = params.get('view');
+  const quick = params.get('quick');
+
+  if (quick === '1') {
+    startQuickEntry();
+  } else if (view && VIEWS.includes(view)) {
+    showView(view);
+  } else {
+    showView('today');
+  }
+
+  // De parameter uit de adresbalk halen, anders herhaalt een verversing dit.
+  if (view || quick) {
+    history.replaceState(null, '', location.pathname);
+  }
+}
+
 function boot() {
+  // Wij bepalen zelf waar de pagina heen scrolt, niet de browser.
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+
   applyTheme(settings.theme);
   $('appVersion').textContent = APP_VERSION;
 
@@ -835,7 +887,7 @@ function boot() {
   fillSettingsForm();
   renderToday();
   renderBmi();
-  showView('today');
+  handleLaunchParams();
   nudgeIfDue();
 }
 

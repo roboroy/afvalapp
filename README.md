@@ -69,6 +69,19 @@ worden. Hieronder de snelste gratis manier.
 pagina. Je krijgt direct een https-adres. Let op dat je het adres bewaart —
 zonder account is het lastig terug te vinden.
 
+### Snel je gewicht invullen
+
+Houd het app-icoon op je beginscherm ingedrukt. Er verschijnt een menu met
+**Wegen** en **Grafiek**. Tik je op *Wegen*, dan opent de app direct op het
+invoerveld met de datum op vandaag — je hoeft niet eerst te navigeren.
+
+Hetzelfde gebeurt als je op een herinneringsmelding tikt: die brengt je
+rechtstreeks naar het invoerveld.
+
+Het toetsenbord springt niet vanzelf open. Android staat dat alleen toe na een
+aanraking, en die is er bij het openen van een snelkoppeling nog niet geweest.
+Het veld staat wel geselecteerd en in beeld, dus één tik en je typt.
+
 ### Installeren op je beginscherm (Android)
 
 Open de link in Chrome. Er verschijnt onderin een balkje **Installeren**; tik

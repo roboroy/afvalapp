@@ -4,7 +4,7 @@
 
 // Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
 // app-bestanden. Verander deze regel niet met de hand.
-const VERSION    = 'afvalapp-9bdd673af2';
+const VERSION    = 'afvalapp-9af926011e';
 const ASSETS     = `${VERSION}-assets`;
 const CONFIG     = 'afvalapp-config';
 const CONFIG_URL = '/__afvalapp_config__';
@@ -179,7 +179,7 @@ async function maybeRemind() {
     icon: 'icons/icon-192.png',
     badge: 'icons/icon-192.png',
     lang: 'nl',
-    data: { url: './' },
+    data: { url: './?quick=1' },
   });
   await writeConfig({ lastNotified: today });
 }
@@ -200,7 +200,12 @@ self.addEventListener('notificationclick', (event) => {
     const target = new URL(event.notification.data?.url || './', self.location.href).href;
     const all = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of all) {
-      if ('focus' in client) return client.focus();
+      if ('focus' in client) {
+        // De app staat al open: geen navigatie, dus zelf doorgeven dat de
+        // gebruiker meteen wil invullen.
+        client.postMessage({ type: 'quick-entry' });
+        return client.focus();
+      }
     }
     if (self.clients.openWindow) return self.clients.openWindow(target);
   })());
