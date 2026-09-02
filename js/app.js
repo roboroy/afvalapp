@@ -639,12 +639,61 @@ window.addEventListener('appinstalled', () => {
   refreshReminderState();
 });
 
-/* ── Service worker ─────────────────────────────────────────── */
+/* ── Service worker en updates ──────────────────────────────── */
+
+let swRegistration = null;
+
+/* Stond er al een service worker aan het roer toen deze pagina laadde?
+   Zo niet, dan is dit de allereerste installatie en moeten we níét
+   herladen wanneer die het overneemt. */
+const hadController = 'serviceWorker' in navigator && !!navigator.serviceWorker.controller;
+let reloadingForUpdate = false;
+
+function showUpdateBanner(worker) {
+  const banner = $('updateBanner');
+  if (!banner || !worker) return;
+  $('installBanner').hidden = true;        // één balkje tegelijk
+  banner.hidden = false;
+
+  $('updateBtn').onclick = () => {
+    $('updateBtn').disabled = true;
+    $('updateBtn').textContent = 'Bezig…';
+    // De wachtende service worker mag het nu overnemen; zodra dat lukt
+    // vuurt 'controllerchange' en herlaadt de pagina in één keer.
+    worker.postMessage({ type: 'skip-waiting' });
+  };
+}
+
+function watchForUpdates(reg) {
+  // Een versie die al klaarstond van een vorige sessie.
+  if (reg.waiting && navigator.serviceWorker.controller) {
+    showUpdateBanner(reg.waiting);
+  }
+
+  reg.addEventListener('updatefound', () => {
+    const incoming = reg.installing;
+    if (!incoming) return;
+    incoming.addEventListener('statechange', () => {
+      // 'installed' mét een bestaande controller betekent: dit is een
+      // update, geen eerste installatie.
+      if (incoming.state === 'installed' && navigator.serviceWorker.controller) {
+        showUpdateBanner(incoming);
+      }
+    });
+  });
+}
 
 if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    location.reload();
+  });
+
   window.addEventListener('load', async () => {
     try {
-      await navigator.serviceWorker.register('sw.js');
+      swRegistration = await navigator.serviceWorker.register('sw.js');
+      watchForUpdates(swRegistration);
       await refreshReminderState();
     } catch { /* offline-modus is dan gewoon niet beschikbaar */ }
   });
@@ -662,6 +711,8 @@ document.addEventListener('visibilitychange', () => {
     renderToday();
     if (!$('view-chart').hidden) renderChartView();
     nudgeIfDue();
+    // Kijken of er inmiddels een nieuwe versie op de server staat.
+    swRegistration?.update().catch(() => {});
   }
 });
 

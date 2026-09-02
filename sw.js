@@ -2,7 +2,9 @@
    sw.js — offline cache + achtergrondherinnering
    ============================================================ */
 
-const VERSION    = 'afvalapp-v1';
+// Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
+// app-bestanden. Verander deze regel niet met de hand.
+const VERSION    = 'afvalapp-b12c92dc12';
 const ASSETS     = `${VERSION}-assets`;
 const CONFIG     = 'afvalapp-config';
 const CONFIG_URL = '/__afvalapp_config__';
@@ -28,9 +30,16 @@ const PRECACHE = [
 self.addEventListener('install', (event) => {
   event.waitUntil((async () => {
     const cache = await caches.open(ASSETS);
-    // Eén mislukt bestand mag de installatie niet slopen.
-    await Promise.all(PRECACHE.map((url) => cache.add(url).catch(() => {})));
-    await self.skipWaiting();
+    // 'reload' omzeilt de gewone browsercache, anders installeren we
+    // mogelijk oude bestanden. Eén mislukt bestand mag de installatie
+    // niet slopen.
+    await Promise.all(
+      PRECACHE.map((url) => cache.add(new Request(url, { cache: 'reload' })).catch(() => {})),
+    );
+    // Bewust géén skipWaiting: de nieuwe versie blijft wachten tot de
+    // gebruiker in de app op "Vernieuwen" tikt. Zo krijg je nooit nieuwe
+    // HTML met oude JavaScript. Bij de allereerste installatie is er
+    // niets om op te wachten en activeert hij vanzelf.
   })());
 });
 
@@ -109,12 +118,22 @@ async function writeConfig(patch) {
 
 self.addEventListener('message', (event) => {
   const data = event.data;
-  if (!data || data.type !== 'config') return;
-  event.waitUntil(writeConfig({
-    reminderEnabled: !!data.reminderEnabled,
-    reminderTime: data.reminderTime || '08:00',
-    lastEntryDate: data.lastEntryDate || null,
-  }));
+  if (!data) return;
+
+  // De pagina zegt: neem het nu over. Dit gebeurt alleen nadat de
+  // gebruiker op "Vernieuwen" heeft getikt.
+  if (data.type === 'skip-waiting') {
+    self.skipWaiting();
+    return;
+  }
+
+  if (data.type === 'config') {
+    event.waitUntil(writeConfig({
+      reminderEnabled: !!data.reminderEnabled,
+      reminderTime: data.reminderTime || '08:00',
+      lastEntryDate: data.lastEntryDate || null,
+    }));
+  }
 });
 
 /* ── Herinnering ────────────────────────────────────────────── */

@@ -461,6 +461,9 @@ input[type="date"], input[type="time"] { min-height: 46px; }
 .install[hidden] { display: none; }
 .install__text { flex: 1; font-size: .85rem; line-height: 1.35; }
 
+/* De updatebalk mag opvallender zijn dan de installatietip. */
+.install--update { border-color: var(--accent); }
+
 .version { text-align: center; font-size: .72rem; color: var(--text-faint); margin: 4px 0 0; }
 
 @media (prefers-reduced-motion: reduce) {
