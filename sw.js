@@ -4,7 +4,7 @@
 
 // Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
 // app-bestanden. Verander deze regel niet met de hand.
-const VERSION    = 'afvalapp-b12c92dc12';
+const VERSION    = 'afvalapp-ca7c0e1d0e';
 const ASSETS     = `${VERSION}-assets`;
 const CONFIG     = 'afvalapp-config';
 const CONFIG_URL = '/__afvalapp_config__';
@@ -131,6 +131,8 @@ self.addEventListener('message', (event) => {
     event.waitUntil(writeConfig({
       reminderEnabled: !!data.reminderEnabled,
       reminderTime: data.reminderTime || '08:00',
+      reminderFrequency: data.reminderFrequency === 'weekly' ? 'weekly' : 'daily',
+      reminderWeekday: Number.isInteger(data.reminderWeekday) ? data.reminderWeekday : 1,
       lastEntryDate: data.lastEntryDate || null,
     }));
   }
@@ -150,8 +152,14 @@ async function maybeRemind() {
   if (cfg.lastEntryDate === today) return;      // vandaag al gewogen
   if (cfg.lastNotified === today) return;       // vandaag al herinnerd
 
-  const [h, m] = String(cfg.reminderTime || '08:00').split(':').map(Number);
   const now = new Date();
+
+  if (cfg.reminderFrequency === 'weekly') {
+    const target = Number.isInteger(cfg.reminderWeekday) ? cfg.reminderWeekday : 1;
+    if (now.getDay() !== target) return;        // vandaag is de gekozen dag niet
+  }
+
+  const [h, m] = String(cfg.reminderTime || '08:00').split(':').map(Number);
   const due = new Date(now);
   due.setHours(h, m, 0, 0);
   if (now < due) return;                        // tijdstip nog niet geweest

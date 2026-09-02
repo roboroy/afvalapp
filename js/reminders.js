@@ -73,6 +73,8 @@ async function pushConfigToSW(settings) {
       type: 'config',
       reminderEnabled: !!settings.reminderEnabled,
       reminderTime: settings.reminderTime || '08:00',
+      reminderFrequency: settings.reminderFrequency === 'weekly' ? 'weekly' : 'daily',
+      reminderWeekday: Number.isInteger(settings.reminderWeekday) ? settings.reminderWeekday : 1,
       lastEntryDate: settings.lastEntryDate || null,
     });
   } catch { /* geen SW: de andere lagen doen hun werk */ }
@@ -106,13 +108,31 @@ async function registerPeriodicSync(enabled) {
 
 let timer = null;
 
-function msUntil(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  const now = new Date();
-  const next = new Date(now);
+/**
+ * Het eerstvolgende weegmoment ná `vanaf`. Bij 'weekly' schuift hij door
+ * naar de gekozen weekdag. Zowel de planning als de agenda-export rekenen
+ * hiermee, zodat ze niet uit elkaar kunnen lopen.
+ */
+export function nextOccurrence(settings, vanaf = new Date()) {
+  const [h, m] = (settings.reminderTime || '08:00').split(':').map(Number);
+  const next = new Date(vanaf);
   next.setHours(h, m, 0, 0);
-  if (next <= now) next.setDate(next.getDate() + 1);
-  return next - now;
+
+  if (settings.reminderFrequency === 'weekly') {
+    const target = Number.isInteger(settings.reminderWeekday) ? settings.reminderWeekday : 1;
+    let vooruit = (target - next.getDay() + 7) % 7;
+    if (vooruit === 0 && next <= vanaf) vooruit = 7;  // vandaag is de dag, maar het moment is geweest
+    next.setDate(next.getDate() + vooruit);
+  } else if (next <= vanaf) {
+    next.setDate(next.getDate() + 1);
+  }
+
+  return next;
+}
+
+function msUntilNext(settings) {
+  const now = new Date();
+  return nextOccurrence(settings, now) - now;
 }
 
 function scheduleInPage(settings, onFire) {
@@ -120,7 +140,7 @@ function scheduleInPage(settings, onFire) {
   timer = null;
   if (!settings.reminderEnabled || permissionState() !== 'granted') return;
 
-  const delay = msUntil(settings.reminderTime);
+  const delay = msUntilNext(settings);
   // setTimeout is onbetrouwbaar boven ~24 dagen en bij bevroren tabs;
   // hier gaat het om hooguit 24 uur en de inhaalcheck vangt de rest op.
   timer = setTimeout(async () => {
@@ -148,8 +168,15 @@ export async function applyReminder(settings, onFire) {
  */
 export function isDue(settings, hasEntryToday) {
   if (!settings.reminderEnabled || hasEntryToday) return false;
-  const [h, m] = (settings.reminderTime || '08:00').split(':').map(Number);
+
   const now = new Date();
+
+  if (settings.reminderFrequency === 'weekly') {
+    const target = Number.isInteger(settings.reminderWeekday) ? settings.reminderWeekday : 1;
+    if (now.getDay() !== target) return false;      // vandaag is de dag niet
+  }
+
+  const [h, m] = (settings.reminderTime || '08:00').split(':').map(Number);
   const due = new Date(now);
   due.setHours(h, m, 0, 0);
   return now >= due;
@@ -165,12 +192,17 @@ function icsStamp(date) {
   return date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
 }
 
-/** Dagelijkse, terugkerende agenda-afspraak met een alarm op het tijdstip zelf. */
-export function buildIcs(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  const start = new Date();
-  start.setHours(h, m, 0, 0);
-  if (start <= new Date()) start.setDate(start.getDate() + 1);
+const ICS_DAYS = ['SU', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA'];
+
+/**
+ * Terugkerende agenda-afspraak met een alarm op het tijdstip zelf.
+ * Volgt dezelfde instelling als de app: elke dag, of wekelijks op één dag.
+ */
+export function buildIcs(settings) {
+  const weekly = settings.reminderFrequency === 'weekly';
+  const weekday = Number.isInteger(settings.reminderWeekday) ? settings.reminderWeekday : 1;
+
+  const start = nextOccurrence(settings);
   const end = new Date(start.getTime() + 10 * 60000);
 
   const local = (d) =>
@@ -191,7 +223,7 @@ export function buildIcs(hhmm) {
     `DTSTAMP:${icsStamp(new Date())}`,
     `DTSTART;TZID=${tz}:${local(start)}`,
     `DTEND;TZID=${tz}:${local(end)}`,
-    'RRULE:FREQ=DAILY',
+    weekly ? `RRULE:FREQ=WEEKLY;BYDAY=${ICS_DAYS[weekday]}` : 'RRULE:FREQ=DAILY',
     'SUMMARY:Wegen — Afvalapp',
     'DESCRIPTION:Vul je gewicht in de Afvalapp in.',
     'BEGIN:VALARM',

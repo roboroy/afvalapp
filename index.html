@@ -106,7 +106,7 @@
   <section id="view-chart" class="view" aria-labelledby="chart-h" hidden>
     <h2 id="chart-h" class="sr-only">Grafiek</h2>
 
-    <div class="segmented" role="tablist" aria-label="Periode">
+    <div class="segmented" id="periodSegmented" role="tablist" aria-label="Periode">
       <button class="segmented__btn is-active" role="tab" aria-selected="true"  data-period="day">Dag</button>
       <button class="segmented__btn"           role="tab" aria-selected="false" data-period="week">Week</button>
       <button class="segmented__btn"           role="tab" aria-selected="false" data-period="month">Maand</button>
@@ -174,12 +174,35 @@
       <label class="switch">
         <input type="checkbox" id="setReminder">
         <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
-        <span class="switch__label">Dagelijkse herinnering om te wegen</span>
+        <span class="switch__label">Herinnering om te wegen</span>
       </label>
-      <label class="field" id="reminderTimeField">
-        <span class="field__label">Tijdstip</span>
-        <input type="time" id="setReminderTime" class="input" value="08:00">
-      </label>
+      <div id="reminderOptions" class="reminder-opts" hidden>
+        <div class="field">
+          <span class="field__label">Hoe vaak</span>
+          <div class="segmented segmented--2" id="freqSegmented" role="group" aria-label="Hoe vaak herinneren">
+            <button type="button" class="segmented__btn is-active" data-freq="daily"  aria-pressed="true">Elke dag</button>
+            <button type="button" class="segmented__btn"           data-freq="weekly" aria-pressed="false">1&times; per week</button>
+          </div>
+        </div>
+
+        <label class="field" id="reminderWeekdayField" hidden>
+          <span class="field__label">Op welke dag</span>
+          <select id="setWeekday" class="input">
+            <option value="1">maandag</option>
+            <option value="2">dinsdag</option>
+            <option value="3">woensdag</option>
+            <option value="4">donderdag</option>
+            <option value="5">vrijdag</option>
+            <option value="6">zaterdag</option>
+            <option value="0">zondag</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span class="field__label">Tijdstip</span>
+          <input type="time" id="setReminderTime" class="input" value="08:00">
+        </label>
+      </div>
       <div class="btnrow">
         <button type="button" class="btn btn--ghost btn--sm" id="testNotifBtn">Test melding</button>
         <button type="button" class="btn btn--ghost btn--sm" id="icsBtn">Agenda-afspraak</button>

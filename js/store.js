@@ -12,6 +12,8 @@ export const DEFAULT_SETTINGS = {
   heightCm: null,
   reminderEnabled: false,
   reminderTime: '08:00',
+  reminderFrequency: 'daily',   // 'daily' | 'weekly'
+  reminderWeekday: 1,           // 0 = zondag … 6 = zaterdag; alleen bij 'weekly'
   theme: 'system',
   lastReminderDate: null,   // YYYY-MM-DD waarop de melding al getoond is
   installDismissed: false,
@@ -81,9 +83,12 @@ const MONTHS_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 's
 const MONTHS_LONG  = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
                       'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
 const DAYS_SHORT   = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
+const DAYS_LONG    = ['zondag', 'maandag', 'dinsdag', 'woensdag',
+                      'donderdag', 'vrijdag', 'zaterdag'];
 
-export const monthShort = (i) => MONTHS_SHORT[i];
-export const monthLong  = (i) => MONTHS_LONG[i];
+export const monthShort  = (i) => MONTHS_SHORT[i];
+export const monthLong   = (i) => MONTHS_LONG[i];
+export const weekdayLong = (i) => DAYS_LONG[i];
 
 /** 82.4 → "82,4" */
 export function fmtKg(v, decimals = 1) {

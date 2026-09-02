@@ -70,6 +70,11 @@ dagelijks terugkerende afspraak plus alarm. Open het bestand op je telefoon en
 je agenda-app zet 'm erin. Dat loopt via het besturingssysteem en is daarmee
 de zekerste optie.
 
+Bij **Instellingen → Herinnering** kies je hoe vaak: **elke dag** of **1× per
+week**. Kies je voor wekelijks, dan verschijnt er een keuze voor de dag. Het
+tijdstip geldt in beide gevallen. De agenda-export volgt dezelfde instelling:
+een dagelijkse afspraak, of een wekelijkse op de gekozen dag.
+
 Zet meldingen aan via de schakelaar bij **Instellingen → Herinnering**. Chrome
 vraagt dan eenmalig toestemming. Heb je die per ongeluk geweigerd, dan zet je
 het terug via het slotje/instellingen-icoon links van de adresbalk →

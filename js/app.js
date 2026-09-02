@@ -6,7 +6,7 @@
 import {
   listEntries, getEntry, saveEntry, deleteEntry, replaceAllEntries, wipeAll,
   getSettings, patchSettings,
-  todayISO, addDays, fromISO, monthLong,
+  todayISO, addDays, fromISO, monthLong, weekdayLong,
   fmtKg, fmtDelta, fmtDateLong, fmtDateShort,
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
 } from './store.js';
@@ -248,10 +248,12 @@ $('entryForm').addEventListener('submit', (e) => {
 
 /* ── Grafiek ────────────────────────────────────────────────── */
 
-for (const btn of document.querySelectorAll('.segmented__btn')) {
+const periodButtons = document.querySelectorAll('#periodSegmented .segmented__btn');
+
+for (const btn of periodButtons) {
   btn.addEventListener('click', () => {
     period = btn.dataset.period;
-    for (const b of document.querySelectorAll('.segmented__btn')) {
+    for (const b of periodButtons) {
       const active = b === btn;
       b.classList.toggle('is-active', active);
       b.setAttribute('aria-selected', String(active));
@@ -425,9 +427,18 @@ bindNumberSetting('setHeight', 'heightCm',    { min: 100, max: 250, integer: tru
 
 /* herinnering */
 
+/** "elke dag om 08:00" of "elke maandag om 08:00" */
+function reminderPhrase(st = settings) {
+  const tijd = st.reminderTime || '08:00';
+  return st.reminderFrequency === 'weekly'
+    ? `elke ${weekdayLong(Number.isInteger(st.reminderWeekday) ? st.reminderWeekday : 1)} om ${tijd}`
+    : `elke dag om ${tijd}`;
+}
+
 async function refreshReminderState() {
   const status = $('notifStatus');
-  $('reminderTimeField').hidden = !settings.reminderEnabled;
+  $('reminderOptions').hidden = !settings.reminderEnabled;
+  $('reminderWeekdayField').hidden = settings.reminderFrequency !== 'weekly';
 
   if (!notificationsSupported()) {
     status.textContent = 'Meldingen worden niet ondersteund in deze browser. De agenda-afspraak werkt wel.';
@@ -453,12 +464,14 @@ async function refreshReminderState() {
   const { background } = await applyReminder({ ...settings, lastEntryDate }, onReminderFires);
 
   const standalone = window.matchMedia('(display-mode: standalone)').matches;
+  const wanneer = reminderPhrase();
+
   if (background === 'on') {
-    status.textContent = `Elke dag om ${settings.reminderTime} krijg je een melding, ook als de app dicht is.`;
+    status.textContent = `Je krijgt ${wanneer} een melding, ook als de app dicht is.`;
   } else if (!standalone) {
-    status.textContent = `Ingesteld op ${settings.reminderTime}. Zet de app op je beginscherm — pas dan mag Android je wekken terwijl de app dicht is. Tot die tijd zie je de herinnering zodra je de app opent.`;
+    status.textContent = `Ingesteld op ${wanneer}. Zet de app op je beginscherm — pas dan mag Android je wekken terwijl de app dicht is. Tot die tijd zie je de herinnering zodra je de app opent.`;
   } else {
-    status.textContent = `Ingesteld op ${settings.reminderTime}. Android bepaalt zelf wanneer het achtergrondproces mag draaien, dus de melding kan iets later komen. De agenda-afspraak is de zekerste back-up.`;
+    status.textContent = `Ingesteld op ${wanneer}. Android bepaalt zelf wanneer het achtergrondproces mag draaien, dus de melding kan iets later komen. De agenda-afspraak is de zekerste back-up.`;
   }
 }
 
@@ -482,14 +495,45 @@ $('setReminder').addEventListener('change', async (e) => {
 
   settings = patchSettings({ reminderEnabled: on });
   await refreshReminderState();
-  if (on && permissionState() === 'granted') toast(`Herinnering aan om ${settings.reminderTime}`);
+  if (on && permissionState() === 'granted') toast(`Herinnering aan: ${reminderPhrase()}`);
 });
 
 $('setReminderTime').addEventListener('change', async (e) => {
   const value = e.target.value || '08:00';
   settings = patchSettings({ reminderTime: value });
   await refreshReminderState();
-  toast(`Herinnering om ${value}`);
+  toast(`Herinnering: ${reminderPhrase()}`);
+});
+
+const freqButtons = document.querySelectorAll('#freqSegmented .segmented__btn');
+
+for (const btn of freqButtons) {
+  btn.addEventListener('click', async () => {
+    const freq = btn.dataset.freq;
+    if (freq === settings.reminderFrequency) return;
+
+    settings = patchSettings({ reminderFrequency: freq });
+    syncFreqButtons();
+    // Een nieuwe frequentie mag de herinnering van vandaag opnieuw laten gelden.
+    settings = patchSettings({ lastReminderDate: null });
+    await refreshReminderState();
+    toast(`Herinnering: ${reminderPhrase()}`);
+  });
+}
+
+function syncFreqButtons() {
+  for (const b of freqButtons) {
+    const active = b.dataset.freq === settings.reminderFrequency;
+    b.classList.toggle('is-active', active);
+    b.setAttribute('aria-pressed', String(active));
+  }
+  $('reminderWeekdayField').hidden = settings.reminderFrequency !== 'weekly';
+}
+
+$('setWeekday').addEventListener('change', async (e) => {
+  settings = patchSettings({ reminderWeekday: Number(e.target.value), lastReminderDate: null });
+  await refreshReminderState();
+  toast(`Herinnering: ${reminderPhrase()}`);
 });
 
 $('testNotifBtn').addEventListener('click', async () => {
@@ -501,7 +545,7 @@ $('testNotifBtn').addEventListener('click', async () => {
 });
 
 $('icsBtn').addEventListener('click', () => {
-  download('afvalapp-herinnering.ics', buildIcs(settings.reminderTime || '08:00'), 'text/calendar');
+  download('afvalapp-herinnering.ics', buildIcs(settings), 'text/calendar');
   toast('Open het bestand om het in je agenda te zetten');
 });
 
@@ -554,12 +598,16 @@ $('importFile').addEventListener('change', async (e) => {
 
     replaceAllEntries(map);
     if (data.settings && typeof data.settings === 'object') {
-      const { startWeight, goalWeight, heightCm, reminderTime } = data.settings;
+      const { startWeight, goalWeight, heightCm, reminderTime,
+              reminderFrequency, reminderWeekday } = data.settings;
       settings = patchSettings({
         startWeight: typeof startWeight === 'number' ? startWeight : settings.startWeight,
         goalWeight:  typeof goalWeight  === 'number' ? goalWeight  : settings.goalWeight,
         heightCm:    typeof heightCm    === 'number' ? heightCm    : settings.heightCm,
         reminderTime: /^\d{2}:\d{2}$/.test(reminderTime || '') ? reminderTime : settings.reminderTime,
+        reminderFrequency: reminderFrequency === 'weekly' ? 'weekly' : 'daily',
+        reminderWeekday: Number.isInteger(reminderWeekday) && reminderWeekday >= 0 && reminderWeekday <= 6
+          ? reminderWeekday : settings.reminderWeekday,
       });
     }
     fillSettingsForm();
@@ -591,7 +639,9 @@ function fillSettingsForm() {
   $('setHeight').value = settings.heightCm    === null ? '' : String(settings.heightCm);
   $('setReminder').checked = !!settings.reminderEnabled;
   $('setReminderTime').value = settings.reminderTime || '08:00';
-  $('reminderTimeField').hidden = !settings.reminderEnabled;
+  $('setWeekday').value = String(Number.isInteger(settings.reminderWeekday) ? settings.reminderWeekday : 1);
+  syncFreqButtons();
+  $('reminderOptions').hidden = !settings.reminderEnabled;
 }
 
 /* ── Zetje wanneer je nog niet gewogen hebt ─────────────────── */

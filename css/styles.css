@@ -321,6 +321,10 @@ input[type="date"], input[type="time"] { min-height: 46px; }
   background: var(--bg-elev); color: var(--text);
   box-shadow: var(--shadow); font-weight: 700;
 }
+.segmented--2 { grid-template-columns: repeat(2, 1fr); }
+
+/* Frequentie, dag en tijdstip verschijnen samen als de herinnering aan staat. */
+.reminder-opts { display: flex; flex-direction: column; gap: 14px; }
 
 /* ── Chart ─────────────────────────────────────────────────── */
 .chart-card { padding: 16px 12px 12px; }
