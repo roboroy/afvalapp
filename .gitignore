@@ -1,0 +1,11 @@
+# macOS
+.DS_Store
+._*
+
+# OneDrive
+.tmp.drivedownload/
+*.tmp
+
+# Editors
+.vscode/
+.idea/

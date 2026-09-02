@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Afvalapp — gewicht bijhouden</title>
+<meta name="description" content="Houd je gewicht bij, stel herinneringen in en zie je verloop per dag, week, maand en jaar.">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Afvalapp">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<header class="appbar">
+  <h1 class="appbar__title">Afvalapp</h1>
+  <button id="themeToggle" class="iconbtn" type="button" aria-label="Thema wisselen" title="Thema wisselen">
+    <span class="iconbtn__glyph" aria-hidden="true">◐</span>
+  </button>
+</header>
+
+<main id="main">
+
+  <!-- ───────────────────────── VANDAAG ───────────────────────── -->
+  <section id="view-today" class="view" aria-labelledby="today-h">
+    <h2 id="today-h" class="sr-only">Vandaag</h2>
+
+    <div class="hero card">
+      <div class="hero__label">Huidig gewicht</div>
+      <div class="hero__value">
+        <span id="heroWeight">—</span><span class="hero__unit">kg</span>
+      </div>
+      <div id="heroDelta" class="hero__delta"></div>
+      <div id="heroDate" class="hero__date"></div>
+    </div>
+
+    <div id="goalCard" class="card goal" hidden>
+      <div class="goal__head">
+        <span class="goal__title">Naar je doel</span>
+        <span id="goalRemaining" class="goal__remaining"></span>
+      </div>
+      <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="goalBar">
+        <div id="goalFill" class="progress__fill"></div>
+      </div>
+      <div class="goal__scale">
+        <span id="goalStart">—</span>
+        <span id="goalPct" class="goal__pct"></span>
+        <span id="goalTarget">—</span>
+      </div>
+    </div>
+
+    <form id="entryForm" class="card form" autocomplete="off">
+      <h3 class="card__title">Gewicht invullen</h3>
+
+      <label class="field">
+        <span class="field__label">Datum</span>
+        <input type="date" id="entryDate" class="input" required>
+      </label>
+
+      <div class="field">
+        <span class="field__label">Gewicht (kg)</span>
+        <div class="stepper">
+          <button type="button" class="stepper__btn" data-step="-0.1" aria-label="0,1 kilo eraf">−</button>
+          <input type="text" id="entryWeight" class="stepper__input" inputmode="decimal"
+                 placeholder="0,0" required>
+          <button type="button" class="stepper__btn" data-step="0.1" aria-label="0,1 kilo erbij">+</button>
+        </div>
+      </div>
+
+      <label class="field">
+        <span class="field__label">Notitie <span class="field__opt">(optioneel)</span></span>
+        <input type="text" id="entryNote" class="input" maxlength="80" placeholder="Bijv. na het sporten">
+      </label>
+
+      <button type="submit" class="btn btn--primary btn--block" id="saveBtn">Opslaan</button>
+      <p id="entryHint" class="hint"></p>
+    </form>
+
+    <div class="stats">
+      <div class="stat card">
+        <div class="stat__label">Deze week</div>
+        <div class="stat__value" id="statWeek">—</div>
+      </div>
+      <div class="stat card">
+        <div class="stat__label">Deze maand</div>
+        <div class="stat__value" id="statMonth">—</div>
+      </div>
+      <div class="stat card">
+        <div class="stat__label">Totaal</div>
+        <div class="stat__value" id="statTotal">—</div>
+      </div>
+      <div class="stat card">
+        <div class="stat__label">Metingen</div>
+        <div class="stat__value" id="statCount">—</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── GRAFIEK ───────────────────────── -->
+  <section id="view-chart" class="view" aria-labelledby="chart-h" hidden>
+    <h2 id="chart-h" class="sr-only">Grafiek</h2>
+
+    <div class="segmented" role="tablist" aria-label="Periode">
+      <button class="segmented__btn is-active" role="tab" aria-selected="true"  data-period="day">Dag</button>
+      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="week">Week</button>
+      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="month">Maand</button>
+      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="year">Jaar</button>
+    </div>
+
+    <div class="card chart-card">
+      <div class="chart-card__head">
+        <div>
+          <div id="chartTitle" class="chart-card__title">Laatste 30 dagen</div>
+          <div id="chartSub" class="chart-card__sub"></div>
+        </div>
+        <div id="chartTrend" class="chart-card__trend"></div>
+      </div>
+      <div id="chartHost" class="chart-host"></div>
+      <div id="chartEmpty" class="empty" hidden>
+        Nog geen metingen in deze periode.<br>Vul je gewicht in bij <strong>Vandaag</strong>.
+      </div>
+      <div id="chartLegend" class="legend" hidden>
+        <span class="legend__item"><i class="legend__swatch legend__swatch--line"></i>Gewicht</span>
+        <span class="legend__item"><i class="legend__swatch legend__swatch--avg"></i>7-daags gemiddelde</span>
+      </div>
+    </div>
+
+    <div class="stats stats--3">
+      <div class="stat card"><div class="stat__label">Laagste</div><div class="stat__value" id="chartMin">—</div></div>
+      <div class="stat card"><div class="stat__label">Gemiddeld</div><div class="stat__value" id="chartAvg">—</div></div>
+      <div class="stat card"><div class="stat__label">Hoogste</div><div class="stat__value" id="chartMax">—</div></div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── HISTORIE ───────────────────────── -->
+  <section id="view-history" class="view" aria-labelledby="history-h" hidden>
+    <div class="view__head">
+      <h2 id="history-h" class="view__title">Historie</h2>
+      <button type="button" class="btn btn--ghost btn--sm" id="exportCsvBtn">CSV</button>
+    </div>
+    <ul id="historyList" class="history" aria-live="polite"></ul>
+    <div id="historyEmpty" class="empty" hidden>Nog geen metingen opgeslagen.</div>
+  </section>
+
+  <!-- ───────────────────────── INSTELLINGEN ───────────────────────── -->
+  <section id="view-settings" class="view" aria-labelledby="settings-h" hidden>
+    <h2 id="settings-h" class="view__title">Instellingen</h2>
+
+    <div class="card form">
+      <h3 class="card__title">Doelen</h3>
+      <label class="field">
+        <span class="field__label">Startgewicht (kg)</span>
+        <input type="text" id="setStart" class="input" inputmode="decimal" placeholder="Bijv. 95,0">
+      </label>
+      <label class="field">
+        <span class="field__label">Streefgewicht (kg)</span>
+        <input type="text" id="setGoal" class="input" inputmode="decimal" placeholder="Bijv. 80,0">
+      </label>
+      <label class="field">
+        <span class="field__label">Lengte (cm) <span class="field__opt">— voor je BMI</span></span>
+        <input type="number" id="setHeight" class="input" inputmode="numeric" step="1" min="100" max="250" placeholder="Bijv. 182">
+      </label>
+      <p id="bmiOut" class="hint"></p>
+    </div>
+
+    <div class="card form">
+      <h3 class="card__title">Herinnering</h3>
+      <label class="switch">
+        <input type="checkbox" id="setReminder">
+        <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+        <span class="switch__label">Dagelijkse herinnering om te wegen</span>
+      </label>
+      <label class="field" id="reminderTimeField">
+        <span class="field__label">Tijdstip</span>
+        <input type="time" id="setReminderTime" class="input" value="08:00">
+      </label>
+      <div class="btnrow">
+        <button type="button" class="btn btn--ghost btn--sm" id="testNotifBtn">Test melding</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="icsBtn">Agenda-afspraak</button>
+      </div>
+      <p id="notifStatus" class="hint"></p>
+    </div>
+
+    <div class="card form">
+      <h3 class="card__title">Gegevens</h3>
+      <p class="hint hint--tight">Je metingen staan alleen op dit apparaat. Maak af en toe een back-up.</p>
+      <div class="btnrow">
+        <button type="button" class="btn btn--ghost btn--sm" id="exportJsonBtn">Back-up maken</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="importBtn">Back-up terugzetten</button>
+        <input type="file" id="importFile" accept="application/json,.json" hidden>
+      </div>
+      <button type="button" class="btn btn--danger btn--block" id="wipeBtn">Alle gegevens wissen</button>
+    </div>
+
+    <p class="version">Afvalapp · werkt offline · <span id="appVersion"></span></p>
+  </section>
+
+</main>
+
+<nav class="tabbar" aria-label="Hoofdnavigatie">
+  <button class="tab is-active" data-view="today"    aria-current="page"><span class="tab__glyph" aria-hidden="true">⊕</span><span class="tab__label">Vandaag</span></button>
+  <button class="tab"           data-view="chart"><span class="tab__glyph" aria-hidden="true">◺</span><span class="tab__label">Grafiek</span></button>
+  <button class="tab"           data-view="history"><span class="tab__glyph" aria-hidden="true">☰</span><span class="tab__label">Historie</span></button>
+  <button class="tab"           data-view="settings"><span class="tab__glyph" aria-hidden="true">⚙</span><span class="tab__label">Instellingen</span></button>
+</nav>
+
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+<div id="installBanner" class="install" hidden>
+  <span class="install__text">Zet Afvalapp op je beginscherm voor herinneringen.</span>
+  <button type="button" class="btn btn--primary btn--sm" id="installBtn">Installeren</button>
+  <button type="button" class="iconbtn iconbtn--sm" id="installClose" aria-label="Sluiten">✕</button>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>

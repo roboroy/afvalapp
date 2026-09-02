@@ -1,0 +1,34 @@
+{
+  "name": "Afvalapp — gewicht bijhouden",
+  "short_name": "Afvalapp",
+  "description": "Houd je gewicht bij, stel een dagelijkse herinnering in en zie je verloop per dag, week, maand en jaar.",
+  "lang": "nl",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "id": "afvalapp",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "background_color": "#0b1220",
+  "theme_color": "#059669",
+  "categories": ["health", "lifestyle", "fitness"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Gewicht invullen",
+      "short_name": "Wegen",
+      "url": "./?view=today",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Grafiek bekijken",
+      "short_name": "Grafiek",
+      "url": "./?view=chart",
+      "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    }
+  ]
+}
