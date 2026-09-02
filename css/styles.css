@@ -220,6 +220,32 @@ body {
 .goal__forecast:empty { display: none; }
 .goal__forecast strong { color: var(--text); font-weight: 650; }
 
+/* ── Mijlpalen ─────────────────────────────────────────────── */
+.celebrate {
+  position: relative;
+  border-color: var(--accent);
+  background: linear-gradient(160deg, var(--accent-soft), var(--bg-elev) 70%);
+  text-align: center;
+  padding: 18px 40px 16px;
+}
+.celebrate__icon { font-size: 1.6rem; line-height: 1; }
+.celebrate__list { margin-top: 6px; display: flex; flex-direction: column; gap: 8px; }
+.celebrate__titel { font-size: .97rem; font-weight: 700; letter-spacing: -.01em; }
+.celebrate__tekst { font-size: .8rem; color: var(--text-soft); line-height: 1.35; margin-top: 1px; }
+.celebrate__close {
+  position: absolute; top: 8px; right: 8px;
+  width: 30px; height: 30px; border: 0; border-radius: 50%;
+  background: transparent; color: var(--text-faint);
+  font-size: 1.15rem; line-height: 1; cursor: pointer;
+}
+.celebrate__close:hover { color: var(--text); }
+
+.achieved__list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+.achieved__item { display: flex; align-items: baseline; gap: 9px; }
+.achieved__dot { flex: none; color: var(--accent-text); font-size: .85rem; line-height: 1.4; }
+.achieved__naam { font-size: .9rem; font-weight: 600; }
+.achieved__datum { margin-left: auto; font-size: .76rem; color: var(--text-faint); white-space: nowrap; }
+
 /* ── Forms ─────────────────────────────────────────────────── */
 .form { display: flex; flex-direction: column; gap: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; }

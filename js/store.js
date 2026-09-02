@@ -3,8 +3,9 @@
    Alles staat in localStorage; er is geen server.
    ============================================================ */
 
-const K_ENTRIES  = 'afvalapp.entries.v1';
-const K_SETTINGS = 'afvalapp.settings.v1';
+const K_ENTRIES    = 'afvalapp.entries.v1';
+const K_SETTINGS   = 'afvalapp.settings.v1';
+const K_MILESTONES = 'afvalapp.milestones.v1';
 
 export const DEFAULT_SETTINGS = {
   startWeight: null,
@@ -16,6 +17,7 @@ export const DEFAULT_SETTINGS = {
   reminderWeekday: 1,           // 0 = zondag … 6 = zaterdag; alleen bij 'weekly'
   theme: 'system',
   lastReminderDate: null,   // YYYY-MM-DD waarop de melding al getoond is
+  milestonesBackfilled: false,  // eenmalige inhaalslag over bestaande historie
   installDismissed: false,
 };
 
@@ -163,6 +165,7 @@ export function wipeAll() {
   try {
     localStorage.removeItem(K_ENTRIES);
     localStorage.removeItem(K_SETTINGS);
+    localStorage.removeItem(K_MILESTONES);
     return true;
   } catch {
     return false;
@@ -377,6 +380,182 @@ export function currentStreak(entries, frequency = 'daily') {
     cursor = addDays(cursor, -1);
   }
   return { count, unit };
+}
+
+/* ── Mijlpalen ──────────────────────────────────────────────── */
+
+/**
+ * Behaalde mijlpalen: { id: { date, titel, tekst } }.
+ * Eenmaal behaald blijft behaald — zak je later terug, dan pakt de app een
+ * mijlpaal niet af en viert hem ook niet nog eens.
+ */
+export function getMilestones() {
+  const obj = readJson(K_MILESTONES, {});
+  return (obj && typeof obj === 'object' && !Array.isArray(obj)) ? obj : {};
+}
+
+export function replaceMilestones(map) {
+  return writeJson(K_MILESTONES, map);
+}
+
+const STREAK_DREMPELS = { dag: [7, 30, 100], week: [4, 12, 26] };
+
+/* Eén plek voor de teksten, zodat het vieren en het inhalen niet uiteenlopen. */
+const TEKST = {
+  goal: (grens, start, goal) => grens === 100
+    ? { titel: 'Streefgewicht bereikt', tekst: `Je zit op ${fmtKg(goal)} kg. Dat was het doel.` }
+    : { titel: `${grens}% van de weg`,
+        tekst: `Je bent ${grens}% onderweg van ${fmtKg(start)} naar ${fmtKg(goal)} kg.` },
+  bmi30: () => ({ titel: 'Uit de obesitas-categorie',
+                  tekst: 'Je BMI is onder de 30. Dat is een echte gezondheidswinst.' }),
+  bmi25: () => ({ titel: 'Gezond gewicht',
+                  tekst: 'Je BMI is onder de 25 — dat geldt als een gezond gewicht.' }),
+  streak: (grens, unit) => {
+    const eenheid = unit === 'week' ? 'weken' : 'dagen';
+    return { titel: `${grens} ${eenheid} op rij`,
+             tekst: `Je hebt je ${grens} ${eenheid} achter elkaar gewogen. Dat volhouden is het halve werk.` };
+  },
+};
+
+/**
+ * Welke mijlpalen zijn er op dít moment gehaald, gegeven de stand van zaken?
+ * Rekent met het trendgewicht: op de rauwe meting zou één droge ochtend al
+ * een feestje opleveren dat de dag erna weer onterecht blijkt.
+ */
+function bereikteMijlpalen(entries, settings, peil, reeks) {
+  const uit = [];
+  const start = settings.startWeight ?? (entries.length ? entries[0].kg : null);
+  const goal = settings.goalWeight;
+
+  if (peil !== null && start !== null && goal !== null && goal !== undefined && start > goal) {
+    const pct = ((start - peil) / (start - goal)) * 100;
+    for (const grens of [25, 50, 75, 100]) {
+      if (pct >= grens) uit.push({ id: `goal-${grens}`, ...TEKST.goal(grens, start, goal) });
+    }
+  }
+
+  // Alleen vieren als je de grens ook echt overschrijdt. Wie al gezond
+  // begon, heeft geen BMI-mijlpaal gehaald.
+  if (peil !== null && start !== null && settings.heightCm) {
+    const nu = bmi(peil, settings.heightCm);
+    const toen = bmi(start, settings.heightCm);
+    if (toen >= 30 && nu < 30) uit.push({ id: 'bmi-overgewicht', ...TEKST.bmi30() });
+    if (toen >= 25 && nu < 25) uit.push({ id: 'bmi-gezond', ...TEKST.bmi25() });
+  }
+
+  if (reeks) {
+    for (const grens of STREAK_DREMPELS[reeks.unit] ?? []) {
+      if (reeks.count >= grens) {
+        uit.push({ id: `streak-${reeks.unit}-${grens}`, ...TEKST.streak(grens, reeks.unit) });
+      }
+    }
+  }
+
+  return uit;
+}
+
+/**
+ * Controleert bij het opslaan of er iets nieuws bereikt is.
+ * @returns {Array<{id, titel, tekst}>} alleen wat nú nieuw is
+ */
+export function checkMilestones(entries, settings) {
+  if (!entries.length) return [];
+
+  const behaald = getMilestones();
+  const peil = hasTrend(entries) ? trendWeight(entries) : null;
+  const reeks = currentStreak(entries, settings.reminderFrequency);
+  const vandaag = todayISO();
+
+  const nieuw = [];
+  for (const m of bereikteMijlpalen(entries, settings, peil, reeks)) {
+    if (behaald[m.id]) continue;
+    behaald[m.id] = { date: vandaag, titel: m.titel, tekst: m.tekst };
+    nieuw.push(m);
+  }
+
+  if (nieuw.length) writeJson(K_MILESTONES, behaald);
+  return nieuw;
+}
+
+/** De dag waarop elke reeks-drempel voor het eerst gehaald werd. */
+function reeksDatums(entries, frequency) {
+  const uit = {};
+  const drempels = STREAK_DREMPELS[frequency === 'weekly' ? 'week' : 'dag'];
+
+  if (frequency === 'weekly') {
+    const sleutel = (isoDatum) => {
+      const { year, week } = isoWeekOf(fromISO(isoDatum));
+      return `${year}-W${String(week).padStart(2, '0')}`;
+    };
+    let run = 0, vorige = null;
+    const gezien = new Set();
+    for (const e of entries) {
+      const k = sleutel(e.date);
+      if (gezien.has(k)) continue;
+      gezien.add(k);
+      run = (vorige !== null && sleutel(addDays(e.date, -7)) === vorige) ? run + 1 : 1;
+      vorige = k;
+      for (const g of drempels) if (run >= g && !uit[g]) uit[g] = e.date;
+    }
+  } else {
+    let run = 0, vorige = null;
+    for (const e of entries) {
+      run = (vorige !== null && addDays(vorige, 1) === e.date) ? run + 1 : 1;
+      vorige = e.date;
+      for (const g of drempels) if (run >= g && !uit[g]) uit[g] = e.date;
+    }
+  }
+  return uit;
+}
+
+/**
+ * Eenmalige inhaalslag over je bestaande historie. Legt mijlpalen vast op de
+ * dag waarop je ze werkelijk haalde, zonder ze te vieren — je hebt ze immers
+ * niet vandaag bereikt.
+ * @returns {number} hoeveel mijlpalen er zijn vastgelegd
+ */
+export function backfillMilestones(entries, settings) {
+  const behaald = getMilestones();
+  if (!entries.length) return 0;
+
+  const avg = movingAverage(entries, 7);
+  const eersteDatum = entries[0].date;
+  const reeks = currentStreak(entries, settings.reminderFrequency);
+  const datums = reeksDatums(entries, settings.reminderFrequency);
+
+  let aantal = 0;
+  const leg = (id, date, titel, tekst) => {
+    if (behaald[id]) return;
+    behaald[id] = { date, titel, tekst };
+    aantal++;
+  };
+
+  for (let i = 0; i < entries.length; i++) {
+    // Zelfde drempel als hasTrend(): pas vanaf drie metingen over twee dagen.
+    if (i < 2 || daysBetween(eersteDatum, entries[i].date) < 2) continue;
+    const peil = avg.get(entries[i].date);
+    if (typeof peil !== 'number') continue;
+
+    for (const m of bereikteMijlpalen(entries, settings, peil, null)) {
+      leg(m.id, entries[i].date, m.titel, m.tekst);
+    }
+  }
+
+  for (const grens of STREAK_DREMPELS[reeks.unit] ?? []) {
+    if (!datums[grens]) continue;
+    const t = TEKST.streak(grens, reeks.unit);
+    leg(`streak-${reeks.unit}-${grens}`, datums[grens], t.titel, t.tekst);
+  }
+
+  if (aantal) writeJson(K_MILESTONES, behaald);
+  return aantal;
+}
+
+/** Alle behaalde mijlpalen, nieuwste eerst. */
+export function listMilestones() {
+  return Object.entries(getMilestones())
+    .map(([id, m]) => ({ id, ...m }))
+    .sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1));
 }
 
 /* ── Aggregatie per periode ─────────────────────────────────── */

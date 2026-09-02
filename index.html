@@ -31,6 +31,12 @@
   <section id="view-today" class="view" aria-labelledby="today-h">
     <h2 id="today-h" class="sr-only">Vandaag</h2>
 
+    <div id="milestoneCard" class="card celebrate" role="status" hidden>
+      <button type="button" class="celebrate__close" id="milestoneClose" aria-label="Sluiten">&times;</button>
+      <div class="celebrate__icon" aria-hidden="true">🎉</div>
+      <div id="milestoneList" class="celebrate__list"></div>
+    </div>
+
     <div class="hero card">
       <div class="hero__label" id="heroLabel">Huidig gewicht</div>
       <div class="hero__value">
@@ -146,6 +152,11 @@
       <h2 id="history-h" class="view__title">Historie</h2>
       <button type="button" class="btn btn--ghost btn--sm" id="exportCsvBtn">CSV</button>
     </div>
+    <div id="achievedCard" class="card achieved" hidden>
+      <h3 class="card__title">Behaalde mijlpalen</h3>
+      <ul id="achievedList" class="achieved__list"></ul>
+    </div>
+
     <ul id="historyList" class="history" aria-live="polite"></ul>
     <div id="historyEmpty" class="empty" hidden>Nog geen metingen opgeslagen.</div>
   </section>

@@ -7,7 +7,8 @@ staan in de opslag van je eigen browser.
 - **Vandaag** — gewicht invullen, je trendgewicht, voortgang naar je doel met een
   prognose wanneer je het haalt, en hoeveel dagen op rij je gemeten hebt
 - **Grafiek** — verloop per **dag**, **week**, **maand** en **jaar**, met een 7-daags gemiddelde en je streefgewicht als stippellijn
-- **Historie** — alle metingen per maand, aantikken om te wijzigen, kruisje om te verwijderen
+- **Historie** — alle metingen per maand, aantikken om te wijzigen, kruisje om te
+  verwijderen, en een overzicht van je behaalde mijlpalen
 - **Instellingen** — start- en streefgewicht, lengte (BMI), dagelijkse herinnering, back-up en export
 
 ---
@@ -35,6 +36,34 @@ noemen zou dan schijnnauwkeurigheid zijn.
 **Dagen op rij** telt hoe lang je het volhoudt. De reeks breekt niet doordat je
 vandaag nog niet op de weegschaal hebt gestaan; de dag is immers nog bezig. Staat
 je herinnering op wekelijks, dan telt de app weken in plaats van dagen.
+
+## Mijlpalen
+
+De app viert drie soorten momenten, en doet dat in het scherm zelf — niet met
+een systeemmelding. Je passeert een mijlpaal namelijk alleen op het moment dat
+je een gewicht invoert, en dan kijk je er toch al naar. Dit onderdeel werkt
+daardoor altijd, ook zonder toestemming voor meldingen.
+
+| Soort | Wanneer |
+|---|---|
+| Onderweg naar je doel | op 25%, 50%, 75% en 100% van de afstand tussen je start- en streefgewicht |
+| BMI-grens | als je BMI onder de 30 komt, en als hij onder de 25 komt |
+| Volhouden | 7, 30 en 100 dagen op rij — of 4, 12 en 26 weken als je herinnering wekelijks staat |
+
+Drie regels bepalen wanneer er iets afgaat:
+
+- **Er wordt gerekend met je trendgewicht,** niet met je rauwe meting. Anders
+  vier je feest omdat je toevallig een droge ochtend had en sta je de dag erna
+  weer boven de grens.
+- **Eenmaal behaald blijft behaald.** Zak je later terug, dan pakt de app een
+  mijlpaal niet af en viert hem ook niet nog een keer.
+- **Een BMI-mijlpaal telt alleen als je de grens ook echt passeert.** Wie al
+  onder de 25 begon, krijgt daar geen mijlpaal voor.
+
+Bij de eerste start na deze versie loopt de app je bestaande historie één keer
+na en legt mijlpalen vast op de dag waarop je ze werkelijk haalde — zonder ze
+te vieren, want je hebt ze niet vandaag bereikt. Je vindt ze terug onder
+**Historie → Behaalde mijlpalen**.
 
 ---
 

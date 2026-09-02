@@ -10,6 +10,7 @@ import {
   fmtKg, fmtDelta, fmtDateLong, fmtDateShort,
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
   trendWeight, trendAgo, hasTrend, forecast, currentStreak,
+  checkMilestones, listMilestones, getMilestones, replaceMilestones, backfillMilestones,
 } from './store.js';
 
 import { renderChart } from './charts.js';
@@ -96,7 +97,7 @@ function showView(name) {
     else tab.removeAttribute('aria-current');
   }
   if (name === 'chart') renderChartView();
-  if (name === 'history') renderHistory();
+  if (name === 'history') { renderHistory(); renderAchieved(); }
   window.scrollTo({ top: 0 });
 }
 
@@ -201,6 +202,59 @@ function renderToday() {
   syncFormHint();
 }
 
+/* ── Mijlpalen ──────────────────────────────────────────────── */
+
+function showMilestones(nieuw) {
+  const card = $('milestoneCard');
+  const lijst = $('milestoneList');
+  if (!nieuw.length) { card.hidden = true; return; }
+
+  lijst.replaceChildren();
+  for (const m of nieuw) {
+    const blok = document.createElement('div');
+    const titel = document.createElement('div');
+    titel.className = 'celebrate__titel';
+    titel.textContent = m.titel;
+    const tekst = document.createElement('div');
+    tekst.className = 'celebrate__tekst';
+    tekst.textContent = m.tekst;
+    blok.append(titel, tekst);
+    lijst.append(blok);
+  }
+  card.hidden = false;
+  card.scrollIntoView({ block: 'nearest' });
+}
+
+$('milestoneClose').addEventListener('click', () => { $('milestoneCard').hidden = true; });
+
+function renderAchieved() {
+  const behaald = listMilestones();
+  const card = $('achievedCard');
+  const lijst = $('achievedList');
+  card.hidden = behaald.length === 0;
+  lijst.replaceChildren();
+
+  for (const m of behaald) {
+    const li = document.createElement('li');
+    li.className = 'achieved__item';
+
+    const dot = document.createElement('span');
+    dot.className = 'achieved__dot';
+    dot.textContent = '\u25CF';
+
+    const naam = document.createElement('span');
+    naam.className = 'achieved__naam';
+    naam.textContent = m.titel;
+
+    const datum = document.createElement('span');
+    datum.className = 'achieved__datum';
+    datum.textContent = fmtDateShort(m.date);
+
+    li.append(dot, naam, datum);
+    lijst.append(li);
+  }
+}
+
 /** Zet de prognoseregel onder de voortgangsbalk. */
 function renderForecast(entries, goal) {
   const el = $('goalForecast');
@@ -297,6 +351,12 @@ $('entryForm').addEventListener('submit', (e) => {
   syncFormHint();
   renderToday();
   refreshReminderState();
+
+  // Alleen vooruit kijken: een oude meting aanpassen deelt geen mijlpalen uit.
+  if (date === todayISO()) {
+    showMilestones(checkMilestones(listEntries(), settings));
+    renderAchieved();
+  }
 });
 
 /* ── Grafiek ────────────────────────────────────────────────── */
@@ -611,6 +671,7 @@ $('exportJsonBtn').addEventListener('click', () => {
     version: 1,
     exportedAt: new Date().toISOString(),
     settings: { ...settings, lastReminderDate: null },
+    milestones: getMilestones(),
     entries: listEntries().map(({ date, kg, note }) => ({ date, kg, note })),
   };
   download(`afvalapp-backup-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
@@ -664,9 +725,15 @@ $('importFile').addEventListener('change', async (e) => {
           ? reminderWeekday : settings.reminderWeekday,
       });
     }
+    if (data.milestones && typeof data.milestones === 'object' && !Array.isArray(data.milestones)) {
+      replaceMilestones(data.milestones);
+    }
+    // Komt de back-up van vóór de mijlpalen, dan alsnog de historie nalopen.
+    backfillMilestones(listEntries(), settings);
     fillSettingsForm();
     renderToday();
     renderBmi();
+    renderAchieved();
     toast(`${count} metingen teruggezet`);
   } catch (err) {
     toast(`Bestand kon niet gelezen worden (${err.message}).`);
@@ -676,7 +743,7 @@ $('importFile').addEventListener('change', async (e) => {
 $('wipeBtn').addEventListener('click', () => {
   if (!confirm('Alles wissen? Al je metingen en instellingen verdwijnen van dit apparaat. Dit kan niet ongedaan gemaakt worden.')) return;
   wipeAll();
-  settings = getSettings();
+  settings = getSettings();          // milestonesBackfilled staat weer op false
   applyTheme(settings.theme);
   fillSettingsForm();
   loadDateIntoForm(todayISO());
@@ -684,6 +751,8 @@ $('wipeBtn').addEventListener('click', () => {
   renderBmi();
   renderChartView();
   renderHistory();
+  renderAchieved();
+  $('milestoneCard').hidden = true;
   toast('Alle gegevens gewist');
 });
 
@@ -885,8 +954,18 @@ function boot() {
   loadDateIntoForm(todayISO());
 
   fillSettingsForm();
+
+  // Eén keer je bestaande historie nalopen, zodat mijlpalen die je allang
+  // bereikt hebt op hun echte datum in het overzicht staan in plaats van
+  // vandaag alsnog als feestje langs te komen.
+  if (!settings.milestonesBackfilled) {
+    backfillMilestones(listEntries(), settings);
+    settings = patchSettings({ milestonesBackfilled: true });
+  }
+
   renderToday();
   renderBmi();
+  renderAchieved();
   handleLaunchParams();
   nudgeIfDue();
 }
