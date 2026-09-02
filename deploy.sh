@@ -35,6 +35,14 @@ if git diff --quiet && git diff --cached --quiet; then
   exit 0
 fi
 
+# Is sw.js zelf veranderd? Zo niet, dan zijn alleen bestanden gewijzigd die
+# buiten de app vallen (README, dit script) en krijgt niemand een melding.
+if git diff --quiet -- sw.js && git diff --cached --quiet -- sw.js; then
+  APP_GEWIJZIGD=nee
+else
+  APP_GEWIJZIGD=ja
+fi
+
 echo "Versie: afvalapp-${HASH}"
 git add -A
 git commit -q -m "$1"
@@ -42,5 +50,9 @@ git push -q
 
 echo
 echo "Gepusht. GitHub Pages heeft ongeveer een minuut nodig."
-echo "Daarna verschijnt in de app het balkje 'Nieuwe versie beschikbaar'."
+if [ "$APP_GEWIJZIGD" = ja ]; then
+  echo "Daarna verschijnt in de app het balkje 'Nieuwe versie beschikbaar'."
+else
+  echo "De app zelf is niet veranderd, dus er komt geen updatemelding."
+fi
 echo "https://roboroy.github.io/afvalapp/"
