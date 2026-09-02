@@ -121,5 +121,27 @@ js/app.js               navigatie en alle schermen aan elkaar
 icons/                  app-iconen
 ```
 
-Na een wijziging houdt de service worker soms de oude versie vast. Verhoog dan
-`VERSION` bovenaan `sw.js`, of ververs met een harde reload.
+## 5. Een wijziging live zetten
+
+```bash
+./deploy.sh "wat je veranderd hebt"
+```
+
+Dat script berekent een hash over alle app-bestanden, schrijft die als
+`VERSION` in `sw.js`, en committeert en pusht. Je hoeft dus nooit zelf een
+versienummer bij te houden — verander die regel ook niet met de hand, want
+dan overschrijft het script 'm toch.
+
+Na ongeveer een minuut staat de nieuwe versie op GitHub Pages. Open je dan de
+app, dan verschijnt onderin **"Er staat een nieuwe versie klaar"** met een knop
+*Vernieuwen*. Pas als je daarop tikt neemt de nieuwe versie het over en
+herlaadt de app in één keer.
+
+Dat wachten is expres. De service worker roept bij het installeren bewust
+geen `skipWaiting()` aan: zou hij meteen overnemen, dan kun je nieuwe HTML
+krijgen terwijl de JavaScript nog uit de oude cache komt. Door te wachten tot
+jij op *Vernieuwen* tikt, wisselt alles tegelijk.
+
+**Je metingen blijven bij een update staan.** De service worker beheert alleen
+de cache met app-bestanden; je gegevens staan in `localStorage` en worden
+daarbij niet aangeraakt. Alleen de knop *Alle gegevens wissen* verwijdert ze.
