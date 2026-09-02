@@ -246,6 +246,30 @@
   <button class="tab"           data-view="settings"><span class="tab__glyph" aria-hidden="true">⚙</span><span class="tab__label">Instellingen</span></button>
 </nav>
 
+<dialog id="setupDialog" class="modal" aria-labelledby="setupTitle">
+  <form id="setupForm" class="modal__form" autocomplete="off">
+    <h2 class="modal__title" id="setupTitle">Nog even aanvullen</h2>
+    <p class="modal__intro" id="setupIntro"></p>
+
+    <label class="field" id="setupGoalField">
+      <span class="field__label">Streefgewicht (kg)</span>
+      <input type="text" id="setupGoal" class="input" inputmode="decimal" placeholder="Bijv. 82,0">
+    </label>
+
+    <label class="field" id="setupHeightField">
+      <span class="field__label">Lengte (cm)</span>
+      <input type="number" id="setupHeight" class="input" inputmode="numeric" step="1" min="100" max="250" placeholder="Bijv. 182">
+    </label>
+
+    <p id="setupError" class="hint hint--error"></p>
+
+    <div class="modal__buttons">
+      <button type="button" class="btn btn--ghost" id="setupLater">Later</button>
+      <button type="submit" class="btn btn--primary">Opslaan</button>
+    </div>
+  </form>
+</dialog>
+
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <div id="updateBanner" class="install install--update" hidden>

@@ -37,6 +37,21 @@ noemen zou dan schijnnauwkeurigheid zijn.
 vandaag nog niet op de weegschaal hebt gestaan; de dag is immers nog bezig. Staat
 je herinnering op wekelijks, dan telt de app weken in plaats van dagen.
 
+## Aanvullen wat ontbreekt
+
+Zonder streefgewicht kan de app geen voortgang en geen prognose berekenen,
+en zonder je lengte geen BMI en geen BMI-mijlpalen. Ontbreekt een van beide,
+dan vraagt de app er bij het openen om in een venster waarin je het meteen
+invult.
+
+Je kunt het wegklikken met **Later**; dan komt het de volgende dag terug
+zolang het onvolledig blijft. Kom je binnen via de snelkoppeling *Wegen*, dan
+blijft het venster weg — je wilde immers snel iets invullen. Bij een gewone
+opening verschijnt het alsnog.
+
+Je startgewicht hoef je niet zelf te zetten: de app neemt daarvoor je eerste
+meting, tenzij je het onder Instellingen aanpast.
+
 ## Mijlpalen
 
 De app viert drie soorten momenten, en doet dat in het scherm zelf — niet met

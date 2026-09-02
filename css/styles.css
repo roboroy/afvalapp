@@ -480,6 +480,28 @@ input[type="date"], input[type="time"] { min-height: 46px; }
 .tab__label { font-size: .68rem; font-weight: 600; letter-spacing: .01em; }
 .tab.is-active { color: var(--accent-text); }
 
+/* ── Aanvulvenster ─────────────────────────────────────────── */
+.modal {
+  width: min(420px, calc(100vw - 32px));
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius);
+  background: var(--bg-elev);
+  color: var(--text);
+  box-shadow: var(--shadow-lg);
+}
+.modal::backdrop {
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+}
+.modal__form { display: flex; flex-direction: column; gap: 14px; padding: 20px; }
+.modal__title { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: -.015em; }
+.modal__intro { margin: 0; font-size: .87rem; color: var(--text-soft); line-height: 1.45; }
+.modal__buttons { display: flex; gap: 8px; margin-top: 2px; }
+.modal__buttons .btn { flex: 1; }
+.hint--error { color: var(--danger); font-weight: 550; }
+
 /* ── Toast ─────────────────────────────────────────────────── */
 .toast {
   position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 16px);

@@ -18,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   theme: 'system',
   lastReminderDate: null,   // YYYY-MM-DD waarop de melding al getoond is
   milestonesBackfilled: false,  // eenmalige inhaalslag over bestaande historie
+  setupDeferredOn: null,        // YYYY-MM-DD waarop 'Later' gekozen is
   installDismissed: false,
 };
 

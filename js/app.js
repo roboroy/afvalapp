@@ -202,6 +202,86 @@ function renderToday() {
   syncFormHint();
 }
 
+/* ── Aanvulvenster ──────────────────────────────────────────── */
+
+function setupOntbreekt() {
+  return { goal: settings.goalWeight === null, lengte: settings.heightCm === null };
+}
+
+/**
+ * Vraagt om streefgewicht en lengte als die ontbreken. Wegklikbaar met
+ * 'Later'; komt de volgende dag terug zolang het onvolledig blijft. Een
+ * venster dat je niet kwijt kunt, is na een week alleen maar irritant.
+ */
+function maybeAskSetup() {
+  const mist = setupOntbreekt();
+  if (!mist.goal && !mist.lengte) return;
+  if (settings.setupDeferredOn === todayISO()) return;
+
+  const dlg = $('setupDialog');
+  if (!dlg || typeof dlg.showModal !== 'function') return;   // oudere browser
+  if (dlg.open) return;
+
+  $('setupGoalField').hidden = !mist.goal;
+  $('setupHeightField').hidden = !mist.lengte;
+  $('setupGoal').value = '';
+  $('setupHeight').value = '';
+  $('setupError').textContent = '';
+
+  $('setupIntro').textContent =
+    mist.goal && mist.lengte
+      ? 'Met je streefgewicht en je lengte kan de app je voortgang, je prognose en je BMI berekenen.'
+      : mist.goal
+        ? 'Met je streefgewicht kan de app je voortgang en je prognose naar dat doel berekenen.'
+        : 'Met je lengte kan de app je BMI berekenen, en de mijlpalen die daarbij horen.';
+
+  dlg.showModal();
+}
+
+$('setupForm').addEventListener('submit', (e) => {
+  e.preventDefault();
+  const mist = setupOntbreekt();
+  const fout = $('setupError');
+  const patch = {};
+
+  if (mist.goal) {
+    const kg = parseNum($('setupGoal').value);
+    if (kg === null || kg < 20 || kg > 400) {
+      fout.textContent = 'Vul een streefgewicht in tussen 20 en 400 kg.';
+      $('setupGoal').focus();
+      return;
+    }
+    patch.goalWeight = kg;
+  }
+
+  if (mist.lengte) {
+    const cm = parseNum($('setupHeight').value);
+    if (cm === null || cm < 100 || cm > 250) {
+      fout.textContent = 'Vul een lengte in tussen 100 en 250 cm.';
+      $('setupHeight').focus();
+      return;
+    }
+    patch.heightCm = Math.round(cm);
+  }
+
+  settings = patchSettings(patch);
+  $('setupDialog').close();
+
+  fillSettingsForm();
+  renderToday();
+  renderBmi();
+  toast('Aangevuld — je voortgang wordt nu berekend');
+});
+
+$('setupLater').addEventListener('click', () => $('setupDialog').close());
+
+// Ook bij Escape geldt: vandaag niet meer vragen.
+$('setupDialog').addEventListener('close', () => {
+  if (setupOntbreekt().goal || setupOntbreekt().lengte) {
+    settings = patchSettings({ setupDeferredOn: todayISO() });
+  }
+});
+
 /* ── Mijlpalen ──────────────────────────────────────────────── */
 
 function showMilestones(nieuw) {
@@ -940,6 +1020,8 @@ function handleLaunchParams() {
   if (view || quick) {
     history.replaceState(null, '', location.pathname);
   }
+
+  return quick === '1' ? 'quick' : 'normaal';
 }
 
 function boot() {
@@ -966,8 +1048,12 @@ function boot() {
   renderToday();
   renderBmi();
   renderAchieved();
-  handleLaunchParams();
+  const start = handleLaunchParams();
   nudgeIfDue();
+
+  // Niet vragen als je via de snelkoppeling komt om even snel te wegen;
+  // dan wil je het invoerveld, geen venster ervoor. Volgende keer wel.
+  if (start !== 'quick') maybeAskSetup();
 }
 
 boot();
