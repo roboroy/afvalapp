@@ -177,7 +177,19 @@ betekent:
 - Als je de sitegegevens van Chrome wist, verdwijnen je metingen.
 
 Maak daarom af en toe een back-up: **Instellingen → Back-up maken** geeft een
-JSON-bestand dat je met **Back-up terugzetten** weer kunt inladen. Bij
+JSON-bestand dat je met **Back-up terugzetten** weer kunt inladen. Onder die
+knoppen staat wanneer je dat voor het laatst deed en hoeveel metingen er
+sindsdien bij zijn gekomen.
+
+De app vraagt er zelf om zodra het achterloopt: bij 20 metingen als je nog
+nooit een back-up maakte, daarna telkens als er 25 metingen bij zijn gekomen,
+en verder als het meer dan vier maanden geleden is en er iets nieuws is. Is er
+niets bij gekomen, dan zwijgt hij — er valt dan immers niets te verliezen. Met
+**Later** heb je twee weken rust.
+
+De app kan niet zien of het bestand ook echt bewaard is; op de knop drukken
+telt als een gemaakte back-up. Ook geldt: een oude meting aanpassen verandert
+het aantal niet, dus zo'n wijziging valt pas op bij de volgende ronde. Bij
 **Historie → CSV** krijg je een bestand met puntkomma's, dat direct opent in
 Excel of Numbers.
 

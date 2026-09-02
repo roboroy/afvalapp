@@ -19,6 +19,9 @@ export const DEFAULT_SETTINGS = {
   lastReminderDate: null,   // YYYY-MM-DD waarop de melding al getoond is
   milestonesBackfilled: false,  // eenmalige inhaalslag over bestaande historie
   setupDeferredOn: null,        // YYYY-MM-DD waarop 'Later' gekozen is
+  lastBackupAt: null,           // YYYY-MM-DD van de laatste back-up
+  lastBackupCount: 0,           // aantal metingen op dat moment
+  backupDeferredUntil: null,    // YYYY-MM-DD tot wanneer niet vragen
   installDismissed: false,
 };
 
@@ -381,6 +384,34 @@ export function currentStreak(entries, frequency = 'daily') {
     cursor = addDays(cursor, -1);
   }
   return { count, unit };
+}
+
+/* ── Back-up ────────────────────────────────────────────────── */
+
+/**
+ * Hoe ver staat de back-up achter? Je metingen staan alleen op dit apparaat,
+ * dus dit is het enige scenario waarin je echt alles kwijt kunt raken.
+ *
+ * @returns {{nodig, nieuwe, dagen, laatst, totaal}}
+ */
+export function backupStatus(entries, settings) {
+  const totaal = entries.length;
+  const nieuwe = Math.max(0, totaal - (settings.lastBackupCount || 0));
+  const laatst = settings.lastBackupAt || null;
+  const dagen = laatst ? daysBetween(laatst, todayISO()) : null;
+
+  let nodig = false;
+  if (totaal >= 5) {
+    // Nooit eerder een back-up: eerder vragen, want dan is het risico grootst.
+    if (laatst === null && totaal >= 20) nodig = true;
+    // Genoeg nieuw werk om te verliezen.
+    else if (nieuwe >= 25) nodig = true;
+    // Of gewoon lang geleden — vangt de wekelijkse wegers op, die anders
+    // pas na een half jaar aan 25 metingen komen.
+    else if (dagen !== null && dagen >= 120 && nieuwe >= 1) nodig = true;
+  }
+
+  return { nodig, nieuwe, dagen, laatst, totaal };
 }
 
 /* ── Mijlpalen ──────────────────────────────────────────────── */

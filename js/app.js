@@ -11,6 +11,7 @@ import {
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
   trendWeight, trendAgo, hasTrend, forecast, currentStreak,
   checkMilestones, listMilestones, getMilestones, replaceMilestones, backfillMilestones,
+  backupStatus,
 } from './store.js';
 
 import { renderChart } from './charts.js';
@@ -193,6 +194,9 @@ function renderToday() {
     tEl.textContent = '—';
     setDeltaClass(tEl, null);
   }
+
+  renderBackupNotice();
+  renderBackupLine();
 
   const streak = currentStreak(entries, settings.reminderFrequency);
   $('statStreakLabel').textContent = streak.unit === 'week' ? 'Weken op rij' : 'Dagen op rij';
@@ -745,17 +749,68 @@ $('icsBtn').addEventListener('click', () => {
 
 /* gegevens */
 
-$('exportJsonBtn').addEventListener('click', () => {
+/* ── Back-up ────────────────────────────────────────────────── */
+
+function maakBackup() {
+  const entries = listEntries();
   const payload = {
     app: 'afvalapp',
     version: 1,
     exportedAt: new Date().toISOString(),
     settings: { ...settings, lastReminderDate: null },
     milestones: getMilestones(),
-    entries: listEntries().map(({ date, kg, note }) => ({ date, kg, note })),
+    entries: entries.map(({ date, kg, note }) => ({ date, kg, note })),
   };
   download(`afvalapp-backup-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+
+  // We kunnen niet zien of het bestand ook echt bewaard is; op de knop
+  // drukken is het beste wat we hebben.
+  settings = patchSettings({
+    lastBackupAt: todayISO(),
+    lastBackupCount: entries.length,
+    backupDeferredUntil: null,
+  });
+  $('backupCard').hidden = true;
+  renderBackupLine();
   toast('Back-up gedownload');
+}
+
+/** Het kaartje op Vandaag dat om een back-up vraagt. */
+function renderBackupNotice() {
+  const st = backupStatus(listEntries(), settings);
+  const card = $('backupCard');
+  const uitgesteld = settings.backupDeferredUntil && todayISO() < settings.backupDeferredUntil;
+
+  if (!st.nodig || uitgesteld) { card.hidden = true; return; }
+
+  $('backupReden').textContent = st.laatst
+    ? `Er ${st.nieuwe === 1 ? 'staat 1 meting' : `staan ${st.nieuwe} metingen`} nog niet in een back-up. ` +
+      `De laatste was ${fmtDateShort(st.laatst)}.`
+    : `Je hebt ${st.totaal} metingen en nog geen back-up. Ze staan alleen op dit apparaat.`;
+  card.hidden = false;
+}
+
+/** De regel onder Instellingen → Gegevens. */
+function renderBackupLine() {
+  const st = backupStatus(listEntries(), settings);
+  if (!st.laatst) {
+    $('backupStatus').textContent = st.totaal
+      ? 'Je hebt nog geen back-up gemaakt.'
+      : '';
+    return;
+  }
+  $('backupStatus').textContent = st.nieuwe
+    ? `Laatste back-up: ${fmtDateLong(st.laatst)} — ${st.nieuwe} ${st.nieuwe === 1 ? 'meting' : 'metingen'} sindsdien.`
+    : `Laatste back-up: ${fmtDateLong(st.laatst)} — bij.`;
+}
+
+$('exportJsonBtn').addEventListener('click', maakBackup);
+$('backupNow').addEventListener('click', maakBackup);
+
+$('backupLater').addEventListener('click', () => {
+  // Twee weken rust. Dagelijks vragen om iets dat niet urgent is, werkt averechts.
+  settings = patchSettings({ backupDeferredUntil: addDays(todayISO(), 14) });
+  $('backupCard').hidden = true;
 });
 
 $('exportCsvBtn').addEventListener('click', () => {
@@ -810,10 +865,18 @@ $('importFile').addEventListener('change', async (e) => {
     }
     // Komt de back-up van vóór de mijlpalen, dan alsnog de historie nalopen.
     backfillMilestones(listEntries(), settings);
+
+    // Je hebt het bestand net nog in handen gehad; dat telt als veilig.
+    settings = patchSettings({
+      lastBackupAt: todayISO(),
+      lastBackupCount: listEntries().length,
+      backupDeferredUntil: null,
+    });
     fillSettingsForm();
     renderToday();
     renderBmi();
     renderAchieved();
+    renderBackupLine();
     toast(`${count} metingen teruggezet`);
   } catch (err) {
     toast(`Bestand kon niet gelezen worden (${err.message}).`);
@@ -832,7 +895,9 @@ $('wipeBtn').addEventListener('click', () => {
   renderChartView();
   renderHistory();
   renderAchieved();
+  renderBackupLine();
   $('milestoneCard').hidden = true;
+  $('backupCard').hidden = true;
   toast('Alle gegevens gewist');
 });
 
@@ -1048,6 +1113,7 @@ function boot() {
   renderToday();
   renderBmi();
   renderAchieved();
+  renderBackupLine();
   const start = handleLaunchParams();
   nudgeIfDue();
 

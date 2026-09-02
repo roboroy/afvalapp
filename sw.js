@@ -4,7 +4,7 @@
 
 // Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
 // app-bestanden. Verander deze regel niet met de hand.
-const VERSION    = 'afvalapp-b00ff1c12e';
+const VERSION    = 'afvalapp-3d6ae84aee';
 const ASSETS     = `${VERSION}-assets`;
 const CONFIG     = 'afvalapp-config';
 const CONFIG_URL = '/__afvalapp_config__';

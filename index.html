@@ -37,6 +37,17 @@
       <div id="milestoneList" class="celebrate__list"></div>
     </div>
 
+    <div id="backupCard" class="card notice" hidden>
+      <div class="notice__text">
+        <strong class="notice__titel">Tijd voor een back-up</strong>
+        <span id="backupReden" class="notice__reden"></span>
+      </div>
+      <div class="notice__buttons">
+        <button type="button" class="btn btn--ghost btn--sm" id="backupLater">Later</button>
+        <button type="button" class="btn btn--primary btn--sm" id="backupNow">Back-up maken</button>
+      </div>
+    </div>
+
     <div class="hero card">
       <div class="hero__label" id="heroLabel">Huidig gewicht</div>
       <div class="hero__value">
@@ -231,6 +242,7 @@
         <button type="button" class="btn btn--ghost btn--sm" id="importBtn">Back-up terugzetten</button>
         <input type="file" id="importFile" accept="application/json,.json" hidden>
       </div>
+      <p id="backupStatus" class="hint"></p>
       <button type="button" class="btn btn--danger btn--block" id="wipeBtn">Alle gegevens wissen</button>
     </div>
 
