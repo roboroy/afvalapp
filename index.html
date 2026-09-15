@@ -34,7 +34,7 @@
 
   <!-- ───────────────────────── VANDAAG ───────────────────────── -->
   <section id="view-today" class="view" aria-labelledby="today-h">
-    <h2 id="today-h" class="sr-only">Vandaag</h2>
+    <h2 id="today-h" class="sr-only" data-i18n="nav.today">Vandaag</h2>
 
     <div id="milestoneCard" class="card celebrate" role="status" hidden>
       <button type="button" class="celebrate__close" id="milestoneClose" data-i18n-aria-label="a11y.close">&times;</button>
@@ -144,7 +144,7 @@
 
   <!-- ───────────────────────── GRAFIEK ───────────────────────── -->
   <section id="view-chart" class="view" aria-labelledby="chart-h" hidden>
-    <h2 id="chart-h" class="sr-only">Grafiek</h2>
+    <h2 id="chart-h" class="sr-only" data-i18n="nav.chart">Grafiek</h2>
 
     <div class="segmented segmented--2" id="maatSegmented" role="group" data-i18n-aria-label="a11y.measure" hidden>
       <button class="segmented__btn is-active" type="button" data-maat="kg" aria-pressed="true" data-i18n="chart.weight">Gewicht</button>
@@ -276,7 +276,7 @@
 
     <div class="card form">
       <h3 class="card__title" data-i18n="share.app.title">Deel de app</h3>
-      <p class="hint hint--tight">
+      <p class="hint hint--tight" data-i18n="share.app.hint">
         Stuur de link door. Wie hem opent kan de app op zijn eigen beginscherm zetten —
         met zijn eigen metingen, die op zijn eigen telefoon blijven. Je deelt geen
         gegevens, alleen het adres.
@@ -293,7 +293,7 @@
 
       <div class="privacy">
         <h4 class="privacy__kop" data-i18n="privacy.localTitle">Wat op dit apparaat blijft</h4>
-        <p class="privacy__tekst">
+        <p class="privacy__tekst" data-i18n="privacy.localBody">
           Je metingen, notities, doelen, lengte en mijlpalen staan in de opslag van deze
           browser. Ze worden nergens heen gestuurd en niemand anders kan erbij — ook de
           maker van de app niet. Er is geen account en geen server die ze bewaart.
@@ -302,18 +302,18 @@
 
       <div class="privacy">
         <h4 class="privacy__kop" data-i18n="privacy.sendTitle">Wat de app wél verstuurt</h4>
-        <p class="privacy__tekst">
+        <p class="privacy__tekst" data-i18n="privacy.sendBody1">
           Hoogstens één keer per dag stuurt de app een leeg berichtje naar een teller.
           Daarin staat niets anders dan om wat voor gebeurtenis het gaat: een opening
           of een installatie.
         </p>
-        <p class="privacy__tekst">
+        <p class="privacy__tekst" data-i18n="privacy.sendBody2">
           De server die dat berichtje ontvangt ziet daarbij je IP-adres, net als elke
           website die je bezoekt. Daaruit wordt <em>het land</em> afgeleid — geen stad,
           geen adres. Bijgehouden wordt hoeveel openingen er per dag per land waren.
           Je IP-adres zelf wordt niet opgeslagen.
         </p>
-        <p class="privacy__tekst">
+        <p class="privacy__tekst" data-i18n="privacy.sendBody3">
           Er gaat geen gewicht mee, geen doel, geen notitie, geen mijlpaal, geen naam en
           geen kenmerk waarmee je herkend kunt worden. Er staan geen cookies in de app en
           er zijn geen advertenties of andere diensten. Wil je helemaal niet meetellen,
@@ -347,13 +347,13 @@
     <p class="modal__intro" id="setupIntro"></p>
 
     <label class="field" id="setupGoalField">
-      <span class="field__label">Streefgewicht (kg)</span>
-      <input type="text" id="setupGoal" class="input" inputmode="decimal" placeholder="Bijv. 82,0">
+      <span class="field__label" data-i18n="settings.goalWeight">Streefgewicht (kg)</span>
+      <input type="text" id="setupGoal" class="input" inputmode="decimal" data-i18n-placeholder="settings.goalPlaceholder">
     </label>
 
     <label class="field" id="setupHeightField">
-      <span class="field__label">Lengte (cm)</span>
-      <input type="number" id="setupHeight" class="input" inputmode="numeric" step="1" min="100" max="250" placeholder="Bijv. 182">
+      <span class="field__label" data-i18n="settings.height">Lengte (cm)</span>
+      <input type="number" id="setupHeight" class="input" inputmode="numeric" step="1" min="100" max="250" data-i18n-placeholder="settings.heightPlaceholder">
     </label>
 
     <p id="setupError" class="hint hint--error"></p>

@@ -102,6 +102,9 @@ function applyStaticTranslations(root = document) {
     el.setAttribute('title', t(el.dataset.i18nTitle));
   }
 
+  // Het invoerveld toont de decimaalscheiding van de taal: 0,0 of 0.0
+  $('entryWeight').placeholder = fmtKg(0);
+
   // Teksten die niet in één sleutel passen omdat er iets in ingevuld moet.
   document.title = t('app.title');
   $('installText').textContent = opIOS() && !staatOpBeginscherm()
