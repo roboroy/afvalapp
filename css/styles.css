@@ -349,6 +349,19 @@ input[type="date"], input[type="time"] { min-height: 46px; }
 .btn--danger:hover { background: var(--danger-soft); }
 .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* ── Deel de app ───────────────────────────────────────────── */
+.applink {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: .82rem; line-height: 1.5;
+  color: var(--accent-text);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
 /* ── Privacy-uitleg ────────────────────────────────────────── */
 .privacy { display: flex; flex-direction: column; gap: 7px; }
 .privacy__kop {

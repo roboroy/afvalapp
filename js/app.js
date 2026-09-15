@@ -240,6 +240,62 @@ function renderToday() {
   syncFormHint();
 }
 
+/* ── De app delen ───────────────────────────────────────────── */
+
+/** Het adres van de app zelf, los van de pagina waar je nu staat. */
+function appAdres() {
+  return new URL('.', location.href).href;
+}
+
+const DEEL_TEKST =
+  'Ik gebruik deze app om mijn gewicht bij te houden. Hij werkt offline en ' +
+  'je metingen blijven op je eigen telefoon.';
+
+async function kopieerNaarKlembord(tekst) {
+  try {
+    await navigator.clipboard.writeText(tekst);
+    toast('Link gekopieerd');
+    return true;
+  } catch {
+    // Het klembord mag geweigerd worden. Dan de link maar selecteren, zodat
+    // kopiëren met de hand nog één handeling is.
+    try {
+      const el = $('appLink');
+      const bereik = document.createRange();
+      bereik.selectNodeContents(el);
+      const selectie = window.getSelection();
+      selectie.removeAllRanges();
+      selectie.addRange(bereik);
+      toast('Kopiëren mocht niet — de link staat geselecteerd');
+    } catch {
+      toast('Kopiëren lukte niet. Selecteer de link met de hand.');
+    }
+    return false;
+  }
+}
+
+$('shareAppBtn').addEventListener('click', async () => {
+  const url = appAdres();
+  if (typeof navigator.share === 'function') {
+    try {
+      await navigator.share({ title: 'Afvalapp', text: DEEL_TEKST, url });
+      return;
+    } catch (err) {
+      // Het deelmenu wegtikken is geen fout; dan doen we verder niets.
+      if (err && err.name === 'AbortError') return;
+    }
+  }
+  await kopieerNaarKlembord(url);
+});
+
+$('copyLinkBtn').addEventListener('click', () => kopieerNaarKlembord(appAdres()));
+
+function renderAppLink() {
+  $('appLink').textContent = appAdres();
+  // Zonder deelmenu is de kopieerknop het enige dat werkt; dan geen loze knop.
+  $('shareAppBtn').hidden = typeof navigator.share !== 'function';
+}
+
 /* ── Meetellen ──────────────────────────────────────────────── */
 
 function renderTelemetrieStatus() {
@@ -1354,6 +1410,7 @@ function boot() {
   renderAchieved();
   renderBackupLine();
   renderTelemetrieStatus();
+  renderAppLink();
 
   // Niet wachten op de service worker: mislukt die registratie, dan bleef
   // deze regel anders leeg. Zodra de worker er wel is wordt hij nogmaals

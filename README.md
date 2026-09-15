@@ -76,6 +76,20 @@ Onder **Instellingen → Privacy** staat dit ook in de app zelf, met een
 schakelaar om niet mee te tellen. Zolang er in `js/telemetrie.js` geen
 Worker-adres is ingevuld, verstuurt de app helemaal niets.
 
+## De app met anderen delen
+
+Onder **Instellingen → Deel de app** staat het adres van de app met een knop
+**Delen** (die het deelmenu van je telefoon opent) en **Kopieer link**. Heeft je
+apparaat geen deelmenu, dan blijft alleen de kopieerknop over.
+
+Je deelt uitsluitend het adres. Wie de link opent begint met een lege app en
+zijn eigen metingen, die net als bij jou op zijn eigen toestel blijven staan.
+Er is niets gezamenlijks: geen account, geen gedeelde lijst, geen inzage in
+elkaars gegevens.
+
+Het adres wordt afgeleid van de pagina waar je op dat moment staat, dus het
+klopt ook als je de app ooit ergens anders neerzet.
+
 ## Voortgang delen
 
 De knop **↗** rechtsboven maakt een afbeelding van je voortgang: je verandering
