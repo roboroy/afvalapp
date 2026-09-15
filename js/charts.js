@@ -50,7 +50,7 @@ function pathFrom(coords) {
  * @param {number|null} opts.goal        streefgewicht, of null
  * @param {Map|null}    opts.avgMap      datum → voortschrijdend gemiddelde (alleen 'time')
  */
-export function renderChart(host, { points, mode, goal = null, avgMap = null }) {
+export function renderChart(host, { points, mode, goal = null, avgMap = null, eenheid = 'kg' }) {
   host.replaceChildren();
   if (!points.length) return;
 
@@ -238,7 +238,7 @@ export function renderChart(host, { points, mode, goal = null, avgMap = null }) 
     selLine.setAttribute('x2', c.x);
     selLine.setAttribute('opacity', 1);
 
-    const parts = [`${fmtKg(p.value)} kg`];
+    const parts = [`${fmtKg(p.value)} ${eenheid}`];
     if (p.count > 1) parts.push(`${p.label} · ${p.count} metingen`);
     else parts.push(p.label);
     tip.textContent = parts.join(' · ');

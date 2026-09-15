@@ -6,12 +6,35 @@ staan in de opslag van je eigen browser.
 
 - **Vandaag** — gewicht invullen, je trendgewicht, voortgang naar je doel met een
   prognose wanneer je het haalt, en hoeveel dagen op rij je gemeten hebt
-- **Grafiek** — verloop per **dag**, **week**, **maand** en **jaar**, met een 7-daags gemiddelde en je streefgewicht als stippellijn
+- **Grafiek** — verloop per **dag**, **week**, **maand** en **jaar**, met een 7-daags gemiddelde en je streefgewicht als stippellijn. Heb je je middel gemeten, dan kun je bovenin wisselen tussen gewicht en middelomtrek
 - **Historie** — alle metingen per maand, aantikken om te wijzigen, kruisje om te
   verwijderen, en een overzicht van je behaalde mijlpalen
 - **Instellingen** — start- en streefgewicht, lengte (BMI), dagelijkse herinnering, back-up en export
 
 ---
+
+## Middelomtrek
+
+Naast je gewicht kun je per meting je middel in centimeters invullen. Dat veld
+is optioneel en mag je overslaan; de meeste mensen wegen dagelijks en meten
+hun middel eens per week.
+
+Zodra je er één invult verschijnt er een kaartje op **Vandaag** met je laatste
+omtrek en het verschil sinds je eerste meting, en krijgt de grafiek bovenin een
+keuze tussen **Gewicht** en **Middel**. Zolang je er geen invult blijft alles
+zoals het was.
+
+Waarom dit de moeite waard is: zodra je gaat sporten kan je gewicht stilstaan
+terwijl je wel centimeters verliest. De weegschaal vertelt dan niet het hele
+verhaal.
+
+**Gewicht blijft verplicht, middel is een extra.** Een meting zonder gewicht
+bestaat niet — het trendgewicht, de prognose en de mijlpalen rekenen daar
+allemaal op. Meet je je middel op een dag dat je niet weegt, vul dan ook even
+je gewicht in.
+
+De omtrek krijgt bewust geen trendlijn, prognose of mijlpalen. Het is een
+tweede maat naast de weegschaal, geen tweede app.
 
 ## Het trendgewicht
 
@@ -208,7 +231,10 @@ betekent:
   wat je op je telefoon hebt ingevuld.
 - Als je de sitegegevens van Chrome wist, verdwijnen je metingen.
 
-Maak daarom af en toe een back-up: **Instellingen → Back-up maken** geeft een
+Back-ups en de CSV-export bevatten je middelomtrek gewoon mee; oudere back-ups
+zonder dat veld laden nog steeds prima.
+
+Maak af en toe een back-up: **Instellingen → Back-up maken** geeft een
 JSON-bestand dat je met **Back-up terugzetten** weer kunt inladen. Onder die
 knoppen staat wanneer je dat voor het laatst deed en hoeveel metingen er
 sindsdien bij zijn gekomen.

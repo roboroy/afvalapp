@@ -142,18 +142,41 @@ export function listEntries() {
   return Object.keys(raw)
     .filter((k) => /^\d{4}-\d{2}-\d{2}$/.test(k) && typeof raw[k]?.kg === 'number')
     .sort()
-    .map((date) => ({ date, kg: raw[date].kg, note: raw[date].note || '', ts: raw[date].ts || 0 }));
+    .map((date) => ({
+      date,
+      kg: raw[date].kg,
+      cm: typeof raw[date].cm === 'number' ? raw[date].cm : null,
+      note: raw[date].note || '',
+      ts: raw[date].ts || 0,
+    }));
 }
 
 export function getEntry(date) {
   const raw = rawEntries();
-  return raw[date] ? { date, kg: raw[date].kg, note: raw[date].note || '' } : null;
+  if (!raw[date]) return null;
+  return {
+    date,
+    kg: raw[date].kg,
+    cm: typeof raw[date].cm === 'number' ? raw[date].cm : null,
+    note: raw[date].note || '',
+  };
 }
 
-export function saveEntry(date, kg, note = '') {
+/**
+ * Gewicht is verplicht, middelomtrek optioneel. Een meting zonder gewicht
+ * bestaat niet: de hele app — trend, prognose, mijlpalen — rekent daarop.
+ */
+export function saveEntry(date, kg, note = '', cm = null) {
   const raw = rawEntries();
   const isNew = !raw[date];
-  raw[date] = { kg: Math.round(kg * 100) / 100, note: note.trim().slice(0, 80), ts: Date.now() };
+  raw[date] = {
+    kg: Math.round(kg * 100) / 100,
+    note: note.trim().slice(0, 80),
+    ts: Date.now(),
+  };
+  if (typeof cm === 'number' && Number.isFinite(cm)) {
+    raw[date].cm = Math.round(cm * 10) / 10;
+  }
   const ok = writeJson(K_ENTRIES, raw);
   return { ok, isNew };
 }
@@ -224,15 +247,16 @@ export function bmiLabel(value) {
 }
 
 /** Voortschrijdend gemiddelde over een venster van `days` kalenderdagen. */
-export function movingAverage(entries, days = 7) {
+export function movingAverage(entries, days = 7, veld = 'kg') {
+  const rij = entries.filter((e) => typeof e[veld] === 'number');
   const out = new Map();
-  for (let i = 0; i < entries.length; i++) {
-    const end = entries[i].date;
+  for (let i = 0; i < rij.length; i++) {
+    const end = rij[i].date;
     const start = addDays(end, -(days - 1));
     let sum = 0, n = 0;
     for (let j = i; j >= 0; j--) {
-      if (entries[j].date < start) break;
-      sum += entries[j].kg;
+      if (rij[j].date < start) break;
+      sum += rij[j][veld];
       n++;
     }
     out.set(end, sum / n);
@@ -593,9 +617,37 @@ export function listMilestones() {
     .sort((a, b) => (a.date === b.date ? 0 : a.date < b.date ? 1 : -1));
 }
 
+/* ── Middelomtrek ───────────────────────────────────────────── */
+
+/**
+ * De stand van zaken rond je middel. Bewust simpeler dan bij gewicht: geen
+ * trendlijn, geen prognose, geen mijlpalen — het is een tweede maat naast de
+ * weegschaal, niet een tweede app.
+ *
+ * @returns {{heeft: boolean, laatste: number|null, datum: string|null,
+ *            aantal: number, verschil: number|null, vanaf: string|null}}
+ */
+export function waistSamenvatting(entries) {
+  const rij = entries.filter((e) => typeof e.cm === 'number');
+  if (!rij.length) {
+    return { heeft: false, laatste: null, datum: null, aantal: 0, verschil: null, vanaf: null };
+  }
+
+  const laatste = rij[rij.length - 1];
+  const eerste = rij[0];
+  return {
+    heeft: true,
+    laatste: laatste.cm,
+    datum: laatste.date,
+    aantal: rij.length,
+    verschil: rij.length >= 2 ? laatste.cm - eerste.cm : null,
+    vanaf: rij.length >= 2 ? eerste.date : null,
+  };
+}
+
 /* ── Aggregatie per periode ─────────────────────────────────── */
 
-function bucketize(entries, keyFn, labelFn, subFn) {
+function bucketize(entries, keyFn, labelFn, subFn, veld = 'kg') {
   const map = new Map();
   for (const e of entries) {
     const key = keyFn(e);
@@ -605,7 +657,7 @@ function bucketize(entries, keyFn, labelFn, subFn) {
   return [...map.values()]
     .sort((a, b) => (a.key < b.key ? -1 : 1))
     .map((b) => {
-      const kgs = b.items.map((i) => i.kg);
+      const kgs = b.items.map((i) => i[veld]);
       const sum = kgs.reduce((a, c) => a + c, 0);
       return {
         key: b.key,
@@ -626,7 +678,10 @@ function bucketize(entries, keyFn, labelFn, subFn) {
  * Bouwt de reeks voor de grafiek.
  * @returns {{ points: Array, mode: 'time'|'bucket', title: string, subtitle: string }}
  */
-export function buildSeries(entries, period) {
+export function buildSeries(entries, period, veld = 'kg') {
+  // Alleen metingen die dit veld echt hebben; middelomtrek is optioneel.
+  entries = entries.filter((e) => typeof e[veld] === 'number');
+
   if (entries.length === 0) {
     return { points: [], mode: 'time', title: '', subtitle: '' };
   }
@@ -648,9 +703,9 @@ export function buildSeries(entries, period) {
       key: e.date,
       label: fmtDateShort(e.date),
       sublabel: e.note,
-      value: e.kg,
-      min: e.kg,
-      max: e.kg,
+      value: e[veld],
+      min: e[veld],
+      max: e[veld],
       count: 1,
       date: e.date,
     }));
@@ -673,6 +728,7 @@ export function buildSeries(entries, period) {
         const d = fromISO(first.date);
         return `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
       },
+      veld,
     );
     buckets = buckets.slice(-26);
     return {
@@ -689,6 +745,7 @@ export function buildSeries(entries, period) {
       (e) => e.date.slice(0, 7),
       (_first, key) => MONTHS_SHORT[Number(key.slice(5, 7)) - 1],
       (_first, key) => key.slice(0, 4),
+      veld,
     );
     buckets = buckets.slice(-24);
     return {
@@ -700,7 +757,7 @@ export function buildSeries(entries, period) {
   }
 
   // year
-  const buckets = bucketize(entries, (e) => e.date.slice(0, 4), (_f, key) => key);
+  const buckets = bucketize(entries, (e) => e.date.slice(0, 4), (_f, key) => key, null, veld);
   return {
     points: buckets,
     mode: 'bucket',

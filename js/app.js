@@ -9,7 +9,7 @@ import {
   todayISO, addDays, fromISO, monthLong, weekdayLong,
   fmtKg, fmtDelta, fmtDateLong, fmtDateShort,
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
-  trendWeight, trendAgo, hasTrend, forecast, currentStreak,
+  trendWeight, trendAgo, hasTrend, forecast, currentStreak, waistSamenvatting,
   checkMilestones, listMilestones, getMilestones, replaceMilestones, backfillMilestones,
   backupStatus,
 } from './store.js';
@@ -228,6 +228,7 @@ function renderToday() {
     setDeltaClass(tEl, null);
   }
 
+  renderWaist(entries);
   renderBackupNotice();
   renderBackupLine();
 
@@ -461,6 +462,27 @@ function renderAchieved() {
   }
 }
 
+/** Het kaartje met je middelomtrek; blijft weg tot je er een invult. */
+function renderWaist(entries) {
+  const kaart = $('waistCard');
+  const w = waistSamenvatting(entries);
+
+  if (!w.heeft) { kaart.hidden = true; return; }
+
+  kaart.hidden = false;
+  $('waistNow').textContent = fmtKg(w.laatste);
+  $('waistDate').textContent = `gemeten ${fmtDateShort(w.datum)}`;
+
+  const deltaEl = $('waistDelta');
+  if (w.verschil === null) {
+    deltaEl.textContent = '';
+    setDeltaClass(deltaEl, null);
+  } else {
+    deltaEl.textContent = `${fmtDelta(w.verschil)} cm sinds ${fmtDateShort(w.vanaf)}`;
+    setDeltaClass(deltaEl, w.verschil);
+  }
+}
+
 /** Zet de prognoseregel onder de voortgangsbalk. */
 function renderForecast(entries, goal) {
   const el = $('goalForecast');
@@ -506,6 +528,7 @@ function loadDateIntoForm(date) {
   $('entryDate').value = date;
   const existing = getEntry(date);
   $('entryWeight').value = existing ? fmtKg(existing.kg) : '';
+  $('entryWaist').value = existing && existing.cm !== null ? fmtKg(existing.cm) : '';
   $('entryNote').value = existing ? existing.note : '';
   syncFormHint();
 }
@@ -540,7 +563,14 @@ $('entryForm').addEventListener('submit', (e) => {
     return;
   }
 
-  const { ok, isNew } = saveEntry(date, kg, $('entryNote').value);
+  const cm = parseNum($('entryWaist').value);
+  if (cm !== null && (cm < 40 || cm > 200)) {
+    toast('Vul een middelomtrek in tussen 40 en 200 cm.');
+    $('entryWaist').focus();
+    return;
+  }
+
+  const { ok, isNew } = saveEntry(date, kg, $('entryNote').value, cm);
   if (!ok) {
     toast('Opslaan mislukt — is de opslag van je browser vol?');
     return;
@@ -554,6 +584,7 @@ $('entryForm').addEventListener('submit', (e) => {
 
   toast(isNew ? `${fmtKg(kg)} kg opgeslagen` : `${fmtDateShort(date)} bijgewerkt naar ${fmtKg(kg)} kg`);
   $('entryNote').value = '';
+  $('entryWaist').value = '';
   syncFormHint();
   renderToday();
   refreshReminderState();
@@ -566,6 +597,22 @@ $('entryForm').addEventListener('submit', (e) => {
 });
 
 /* ── Grafiek ────────────────────────────────────────────────── */
+
+let maat = 'kg';        // 'kg' of 'cm'
+
+const maatButtons = document.querySelectorAll('#maatSegmented .segmented__btn');
+
+for (const btn of maatButtons) {
+  btn.addEventListener('click', () => {
+    maat = btn.dataset.maat;
+    for (const b of maatButtons) {
+      const actief = b === btn;
+      b.classList.toggle('is-active', actief);
+      b.setAttribute('aria-pressed', String(actief));
+    }
+    renderChartView();
+  });
+}
 
 const periodButtons = document.querySelectorAll('#periodSegmented .segmented__btn');
 
@@ -583,7 +630,21 @@ for (const btn of periodButtons) {
 
 function renderChartView() {
   const entries = listEntries();
-  const series = buildSeries(entries, period);
+
+  // De keuze tussen gewicht en middel verschijnt pas als er iets te kiezen valt.
+  const heeftMiddel = entries.some((e) => typeof e.cm === 'number');
+  $('maatSegmented').hidden = !heeftMiddel;
+  if (!heeftMiddel && maat !== 'kg') {
+    maat = 'kg';
+    for (const b of maatButtons) {
+      const actief = b.dataset.maat === 'kg';
+      b.classList.toggle('is-active', actief);
+      b.setAttribute('aria-pressed', String(actief));
+    }
+  }
+
+  const eenheid = maat === 'cm' ? 'cm' : 'kg';
+  const series = buildSeries(entries, period, maat);
   const host = $('chartHost');
   const empty = $('chartEmpty');
   const legend = $('chartLegend');
@@ -594,6 +655,9 @@ function renderChartView() {
   if (!series.points.length) {
     host.replaceChildren();
     empty.hidden = false;
+    empty.innerHTML = maat === 'cm'
+      ? 'Nog geen middelomtrek in deze periode.<br>Vul er een in bij <strong>Vandaag</strong>.'
+      : 'Nog geen metingen in deze periode.<br>Vul je gewicht in bij <strong>Vandaag</strong>.';
     legend.hidden = true;
     $('chartTrend').textContent = '';
     $('chartMin').textContent = $('chartAvg').textContent = $('chartMax').textContent = '—';
@@ -602,19 +666,22 @@ function renderChartView() {
 
   empty.hidden = true;
   legend.hidden = !(period === 'day' && series.points.length > 2);
+  $('legendMaat').textContent = maat === 'cm' ? 'Middel' : 'Gewicht';
 
   renderChart(host, {
     points: series.points,
     mode: series.mode,
-    goal: settings.goalWeight,
-    avgMap: period === 'day' ? movingAverage(entries, 7) : null,
+    // Het streefgewicht hoort niet in een grafiek over centimeters.
+    goal: maat === 'kg' ? settings.goalWeight : null,
+    avgMap: period === 'day' ? movingAverage(entries, 7, maat) : null,
+    eenheid,
   });
 
   /* trend over de getoonde periode */
   const trendEl = $('chartTrend');
   if (series.points.length >= 2) {
     const d = series.points[series.points.length - 1].value - series.points[0].value;
-    trendEl.textContent = `${fmtDelta(d)} kg`;
+    trendEl.textContent = `${fmtDelta(d)} ${eenheid}`;
     setDeltaClass(trendEl, d);
   } else {
     trendEl.textContent = '';
@@ -663,10 +730,15 @@ function renderHistory() {
     dateEl.className = 'hitem__date';
     dateEl.textContent = fmtDateLong(e.date);
     main.append(dateEl);
-    if (e.note) {
+    const bijschrift = [
+      e.cm !== null ? `${fmtKg(e.cm)} cm` : null,
+      e.note || null,
+    ].filter(Boolean).join(' · ');
+
+    if (bijschrift) {
       const note = document.createElement('div');
       note.className = 'hitem__note';
-      note.textContent = e.note;
+      note.textContent = bijschrift;
       main.append(note);
     }
 
@@ -899,7 +971,7 @@ function maakBackup() {
     exportedAt: new Date().toISOString(),
     settings: { ...settings, lastReminderDate: null },
     milestones: getMilestones(),
-    entries: entries.map(({ date, kg, note }) => ({ date, kg, note })),
+    entries: entries.map(({ date, kg, cm, note }) => ({ date, kg, cm, note })),
   };
   download(`afvalapp-backup-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
 
@@ -954,8 +1026,15 @@ $('backupLater').addEventListener('click', () => {
 });
 
 $('exportCsvBtn').addEventListener('click', () => {
-  const rows = [['datum', 'gewicht_kg', 'notitie']];
-  for (const e of listEntries()) rows.push([e.date, String(e.kg).replace('.', ','), e.note]);
+  const rows = [['datum', 'gewicht_kg', 'middel_cm', 'notitie']];
+  for (const e of listEntries()) {
+    rows.push([
+      e.date,
+      String(e.kg).replace('.', ','),
+      e.cm === null ? '' : String(e.cm).replace('.', ','),
+      e.note,
+    ]);
+  }
   const csv = rows
     .map((r) => r.map((c) => (/[";\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(';'))
     .join('\r\n');
@@ -980,6 +1059,9 @@ $('importFile').addEventListener('change', async (e) => {
       const kg = typeof row.kg === 'number' ? row.kg : parseNum(row.kg);
       if (kg === null || kg < 20 || kg > 400) continue;
       map[row.date] = { kg, note: String(row.note || '').slice(0, 80), ts: Date.now() };
+
+      const cm = typeof row.cm === 'number' ? row.cm : parseNum(row.cm);
+      if (cm !== null && cm >= 40 && cm <= 200) map[row.date].cm = cm;
     }
 
     const count = Object.keys(map).length;

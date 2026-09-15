@@ -16,8 +16,17 @@ import { todayISO, getSettings, patchSettings } from './store.js';
  */
 const TELLER_URL = 'https://afvalapp-teller.roboroy.workers.dev';
 
+/** Draaien we op een ontwikkelmachine in plaats van op de echte site? */
+function lokaleOmgeving() {
+  const h = location.hostname;
+  return h === 'localhost' || h === '127.0.0.1' || h === '' || h.endsWith('.local');
+}
+
 export function tellerIngesteld() {
-  return /^https:\/\//.test(TELLER_URL);
+  // Vanaf localhost telt de app niet mee. De Worker zou het verzoek toch
+  // weigeren, en zo vervuil je tijdens het ontwikkelen de cijfers niet én
+  // hou je de console schoon.
+  return /^https:\/\//.test(TELLER_URL) && !lokaleOmgeving();
 }
 
 export function tellerAdres() {

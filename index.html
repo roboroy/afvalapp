@@ -79,6 +79,17 @@
       <p id="goalForecast" class="goal__forecast"></p>
     </div>
 
+    <div id="waistCard" class="card waist" hidden>
+      <div class="waist__links">
+        <span class="waist__label">Middelomtrek</span>
+        <span id="waistDate" class="waist__datum"></span>
+      </div>
+      <div class="waist__rechts">
+        <span class="waist__value"><span id="waistNow">—</span> cm</span>
+        <span id="waistDelta" class="waist__delta"></span>
+      </div>
+    </div>
+
     <form id="entryForm" class="card form" autocomplete="off">
       <h3 class="card__title">Gewicht invullen</h3>
 
@@ -96,6 +107,11 @@
           <button type="button" class="stepper__btn" data-step="0.1" aria-label="0,1 kilo erbij">+</button>
         </div>
       </div>
+
+      <label class="field">
+        <span class="field__label">Middel in cm <span class="field__opt">(optioneel)</span></span>
+        <input type="text" id="entryWaist" class="input" inputmode="decimal" placeholder="Bijv. 94,5">
+      </label>
 
       <label class="field">
         <span class="field__label">Notitie <span class="field__opt">(optioneel)</span></span>
@@ -130,6 +146,11 @@
   <section id="view-chart" class="view" aria-labelledby="chart-h" hidden>
     <h2 id="chart-h" class="sr-only">Grafiek</h2>
 
+    <div class="segmented segmented--2" id="maatSegmented" role="group" aria-label="Wat je bekijkt" hidden>
+      <button class="segmented__btn is-active" type="button" data-maat="kg" aria-pressed="true">Gewicht</button>
+      <button class="segmented__btn"           type="button" data-maat="cm" aria-pressed="false">Middel</button>
+    </div>
+
     <div class="segmented" id="periodSegmented" role="tablist" aria-label="Periode">
       <button class="segmented__btn is-active" role="tab" aria-selected="true"  data-period="day">Dag</button>
       <button class="segmented__btn"           role="tab" aria-selected="false" data-period="week">Week</button>
@@ -150,7 +171,7 @@
         Nog geen metingen in deze periode.<br>Vul je gewicht in bij <strong>Vandaag</strong>.
       </div>
       <div id="chartLegend" class="legend" hidden>
-        <span class="legend__item"><i class="legend__swatch legend__swatch--line"></i>Gewicht</span>
+        <span class="legend__item"><i class="legend__swatch legend__swatch--line"></i><span id="legendMaat">Gewicht</span></span>
         <span class="legend__item"><i class="legend__swatch legend__swatch--avg"></i>7-daags gemiddelde</span>
       </div>
     </div>

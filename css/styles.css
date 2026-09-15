@@ -265,6 +265,27 @@ body {
 .notice__buttons { display: flex; gap: 8px; }
 .notice__buttons .btn { flex: 1; }
 
+/* ── Middelomtrek ──────────────────────────────────────────── */
+.waist {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 14px; padding: 14px 16px;
+}
+.waist__links { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.waist__label { font-size: .92rem; font-weight: 650; color: var(--text-soft); }
+.waist__datum { font-size: .76rem; color: var(--text-faint); }
+.waist__rechts { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.waist__value {
+  font-family: var(--font-num); font-size: 1.35rem; font-weight: 700;
+  letter-spacing: -.02em; font-variant-numeric: tabular-nums; white-space: nowrap;
+}
+.waist__delta {
+  font-size: .78rem; font-weight: 650; font-variant-numeric: tabular-nums;
+  color: var(--text-faint);
+}
+.waist__delta.is-down { color: var(--down); }
+.waist__delta.is-up   { color: var(--up); }
+.waist__delta:empty { display: none; }
+
 /* ── Forms ─────────────────────────────────────────────────── */
 .form { display: flex; flex-direction: column; gap: 14px; }
 .field { display: flex; flex-direction: column; gap: 6px; }
