@@ -7,6 +7,7 @@
    ============================================================ */
 
 import { fromISO, fmtKg } from './store.js';
+import { t } from './i18n.js';
 
 const VB_W = 340;
 const VB_H = 210;
@@ -102,7 +103,7 @@ export function renderChart(host, { points, mode, goal = null, avgMap = null, ee
     viewBox: `0 0 ${VB_W} ${VB_H}`,
     preserveAspectRatio: 'xMidYMid meet',
     role: 'img',
-    'aria-label': `Gewichtsgrafiek met ${points.length} ${points.length === 1 ? 'punt' : 'punten'}`,
+    'aria-label': t('entries.count', { n: points.length }),
   });
 
   const defs = svgEl('defs');
@@ -239,7 +240,7 @@ export function renderChart(host, { points, mode, goal = null, avgMap = null, ee
     selLine.setAttribute('opacity', 1);
 
     const parts = [`${fmtKg(p.value)} ${eenheid}`];
-    if (p.count > 1) parts.push(`${p.label} · ${p.count} metingen`);
+    if (p.count > 1) parts.push(t('chart.tooltipCount', { label: p.label, n: p.count }));
     else parts.push(p.label);
     tip.textContent = parts.join(' · ');
 

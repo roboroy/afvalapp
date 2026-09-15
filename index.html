@@ -3,15 +3,15 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Afvalapp — gewicht bijhouden</title>
-<meta name="description" content="Houd je gewicht bij, stel herinneringen in en zie je verloop per dag, week, maand en jaar.">
+<title>Private Scale</title>
+<meta name="description" content="Track your weight, set reminders and see your trend by day, week, month and year. Your data stays on your phone.">
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#059669" media="(prefers-color-scheme: light)">
 <meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Afvalapp">
+<meta name="apple-mobile-web-app-title" content="Private Scale">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="stylesheet" href="css/styles.css">
@@ -19,12 +19,12 @@
 <body>
 
 <header class="appbar">
-  <h1 class="appbar__title">Afvalapp</h1>
+  <h1 class="appbar__title" data-i18n="app.name">Private Scale</h1>
   <div class="appbar__acties">
-    <button id="shareBtn" class="iconbtn" type="button" aria-label="Voortgang delen" title="Voortgang delen">
+    <button id="shareBtn" class="iconbtn" type="button" data-i18n-aria-label="a11y.share" data-i18n-title="a11y.share">
       <span class="iconbtn__glyph" aria-hidden="true">↗</span>
     </button>
-    <button id="themeToggle" class="iconbtn" type="button" aria-label="Thema wisselen" title="Thema wisselen">
+    <button id="themeToggle" class="iconbtn" type="button" data-i18n-aria-label="a11y.theme" data-i18n-title="a11y.theme">
       <span class="iconbtn__glyph" aria-hidden="true">◐</span>
     </button>
   </div>
@@ -37,24 +37,24 @@
     <h2 id="today-h" class="sr-only">Vandaag</h2>
 
     <div id="milestoneCard" class="card celebrate" role="status" hidden>
-      <button type="button" class="celebrate__close" id="milestoneClose" aria-label="Sluiten">&times;</button>
+      <button type="button" class="celebrate__close" id="milestoneClose" data-i18n-aria-label="a11y.close">&times;</button>
       <div class="celebrate__icon" aria-hidden="true">🎉</div>
       <div id="milestoneList" class="celebrate__list"></div>
     </div>
 
     <div id="backupCard" class="card notice" hidden>
       <div class="notice__text">
-        <strong class="notice__titel">Tijd voor een back-up</strong>
+        <strong class="notice__titel" data-i18n="backup.noticeTitle">Tijd voor een back-up</strong>
         <span id="backupReden" class="notice__reden"></span>
       </div>
       <div class="notice__buttons">
-        <button type="button" class="btn btn--ghost btn--sm" id="backupLater">Later</button>
-        <button type="button" class="btn btn--primary btn--sm" id="backupNow">Back-up maken</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="backupLater" data-i18n="later">Later</button>
+        <button type="button" class="btn btn--primary btn--sm" id="backupNow" data-i18n="data.backup">Back-up maken</button>
       </div>
     </div>
 
     <div class="hero card">
-      <div class="hero__label" id="heroLabel">Huidig gewicht</div>
+      <div class="hero__label" id="heroLabel">Current weight</div>
       <div class="hero__value">
         <span id="heroWeight">—</span><span class="hero__unit">kg</span>
       </div>
@@ -65,7 +65,7 @@
 
     <div id="goalCard" class="card goal" hidden>
       <div class="goal__head">
-        <span class="goal__title">Naar je doel</span>
+        <span class="goal__title" data-i18n="today.goalTitle">Naar je doel</span>
         <span id="goalRemaining" class="goal__remaining"></span>
       </div>
       <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="goalBar">
@@ -81,7 +81,7 @@
 
     <div id="waistCard" class="card waist" hidden>
       <div class="waist__links">
-        <span class="waist__label">Middelomtrek</span>
+        <span class="waist__label" data-i18n="today.waist">Middelomtrek</span>
         <span id="waistDate" class="waist__datum"></span>
       </div>
       <div class="waist__rechts">
@@ -91,48 +91,48 @@
     </div>
 
     <form id="entryForm" class="card form" autocomplete="off">
-      <h3 class="card__title">Gewicht invullen</h3>
+      <h3 class="card__title" data-i18n="form.title">Gewicht invullen</h3>
 
       <label class="field">
-        <span class="field__label">Datum</span>
+        <span class="field__label" data-i18n="form.date">Datum</span>
         <input type="date" id="entryDate" class="input" required>
       </label>
 
       <div class="field">
-        <span class="field__label">Gewicht (kg)</span>
+        <span class="field__label" data-i18n="form.weight">Gewicht (kg)</span>
         <div class="stepper">
-          <button type="button" class="stepper__btn" data-step="-0.1" aria-label="0,1 kilo eraf">−</button>
+          <button type="button" class="stepper__btn" data-step="-0.1" data-i18n-aria-label="a11y.stepDown">−</button>
           <input type="text" id="entryWeight" class="stepper__input" inputmode="decimal"
                  placeholder="0,0" required>
-          <button type="button" class="stepper__btn" data-step="0.1" aria-label="0,1 kilo erbij">+</button>
+          <button type="button" class="stepper__btn" data-step="0.1" data-i18n-aria-label="a11y.stepUp">+</button>
         </div>
       </div>
 
       <label class="field">
-        <span class="field__label">Middel in cm <span class="field__opt">(optioneel)</span></span>
-        <input type="text" id="entryWaist" class="input" inputmode="decimal" placeholder="Bijv. 94,5">
+        <span class="field__label"><span data-i18n="form.waist">Middel in cm</span> <span class="field__opt" data-i18n="form.optional">(optioneel)</span></span>
+        <input type="text" id="entryWaist" class="input" inputmode="decimal" data-i18n-placeholder="form.waistPlaceholder">
       </label>
 
       <label class="field">
-        <span class="field__label">Notitie <span class="field__opt">(optioneel)</span></span>
-        <input type="text" id="entryNote" class="input" maxlength="80" placeholder="Bijv. na het sporten">
+        <span class="field__label"><span data-i18n="form.note">Notitie</span> <span class="field__opt" data-i18n="form.optional">(optioneel)</span></span>
+        <input type="text" id="entryNote" class="input" maxlength="80" data-i18n-placeholder="form.notePlaceholder">
       </label>
 
-      <button type="submit" class="btn btn--primary btn--block" id="saveBtn">Opslaan</button>
+      <button type="submit" class="btn btn--primary btn--block" id="saveBtn" data-i18n="form.save">Opslaan</button>
       <p id="entryHint" class="hint"></p>
     </form>
 
     <div class="stats">
       <div class="stat card">
-        <div class="stat__label">Deze week</div>
+        <div class="stat__label" data-i18n="stat.week">Deze week</div>
         <div class="stat__value" id="statWeek">—</div>
       </div>
       <div class="stat card">
-        <div class="stat__label">Deze maand</div>
+        <div class="stat__label" data-i18n="stat.month">Deze maand</div>
         <div class="stat__value" id="statMonth">—</div>
       </div>
       <div class="stat card">
-        <div class="stat__label">Totaal</div>
+        <div class="stat__label" data-i18n="stat.total">Totaal</div>
         <div class="stat__value" id="statTotal">—</div>
       </div>
       <div class="stat card">
@@ -146,16 +146,16 @@
   <section id="view-chart" class="view" aria-labelledby="chart-h" hidden>
     <h2 id="chart-h" class="sr-only">Grafiek</h2>
 
-    <div class="segmented segmented--2" id="maatSegmented" role="group" aria-label="Wat je bekijkt" hidden>
-      <button class="segmented__btn is-active" type="button" data-maat="kg" aria-pressed="true">Gewicht</button>
-      <button class="segmented__btn"           type="button" data-maat="cm" aria-pressed="false">Middel</button>
+    <div class="segmented segmented--2" id="maatSegmented" role="group" data-i18n-aria-label="a11y.measure" hidden>
+      <button class="segmented__btn is-active" type="button" data-maat="kg" aria-pressed="true" data-i18n="chart.weight">Gewicht</button>
+      <button class="segmented__btn"           type="button" data-maat="cm" aria-pressed="false" data-i18n="chart.waist">Middel</button>
     </div>
 
-    <div class="segmented" id="periodSegmented" role="tablist" aria-label="Periode">
-      <button class="segmented__btn is-active" role="tab" aria-selected="true"  data-period="day">Dag</button>
-      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="week">Week</button>
-      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="month">Maand</button>
-      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="year">Jaar</button>
+    <div class="segmented" id="periodSegmented" role="tablist" data-i18n-aria-label="a11y.period">
+      <button class="segmented__btn is-active" role="tab" aria-selected="true"  data-period="day" data-i18n="chart.day">Dag</button>
+      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="week" data-i18n="chart.week">Week</button>
+      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="month" data-i18n="chart.month">Maand</button>
+      <button class="segmented__btn"           role="tab" aria-selected="false" data-period="year" data-i18n="chart.year">Jaar</button>
     </div>
 
     <div class="card chart-card">
@@ -168,112 +168,114 @@
       </div>
       <div id="chartHost" class="chart-host"></div>
       <div id="chartEmpty" class="empty" hidden>
-        Nog geen metingen in deze periode.<br>Vul je gewicht in bij <strong>Vandaag</strong>.
+        
       </div>
       <div id="chartLegend" class="legend" hidden>
         <span class="legend__item"><i class="legend__swatch legend__swatch--line"></i><span id="legendMaat">Gewicht</span></span>
-        <span class="legend__item"><i class="legend__swatch legend__swatch--avg"></i>7-daags gemiddelde</span>
+        <span class="legend__item"><i class="legend__swatch legend__swatch--avg"></i><span data-i18n="chart.movingAverage">7-daags gemiddelde</span></span>
       </div>
     </div>
 
     <div class="stats stats--3">
-      <div class="stat card"><div class="stat__label">Laagste</div><div class="stat__value" id="chartMin">—</div></div>
-      <div class="stat card"><div class="stat__label">Gemiddeld</div><div class="stat__value" id="chartAvg">—</div></div>
-      <div class="stat card"><div class="stat__label">Hoogste</div><div class="stat__value" id="chartMax">—</div></div>
+      <div class="stat card"><div class="stat__label" data-i18n="chart.lowest">Laagste</div><div class="stat__value" id="chartMin">—</div></div>
+      <div class="stat card"><div class="stat__label" data-i18n="chart.average">Gemiddeld</div><div class="stat__value" id="chartAvg">—</div></div>
+      <div class="stat card"><div class="stat__label" data-i18n="chart.highest">Hoogste</div><div class="stat__value" id="chartMax">—</div></div>
     </div>
   </section>
 
   <!-- ───────────────────────── HISTORIE ───────────────────────── -->
   <section id="view-history" class="view" aria-labelledby="history-h" hidden>
     <div class="view__head">
-      <h2 id="history-h" class="view__title">Historie</h2>
-      <button type="button" class="btn btn--ghost btn--sm" id="exportCsvBtn">CSV</button>
+      <h2 id="history-h" class="view__title" data-i18n="history.title">Historie</h2>
+      <button type="button" class="btn btn--ghost btn--sm" id="exportCsvBtn" data-i18n="history.csv">CSV</button>
     </div>
     <div id="achievedCard" class="card achieved" hidden>
-      <h3 class="card__title">Behaalde mijlpalen</h3>
+      <h3 class="card__title" data-i18n="history.milestones">Behaalde mijlpalen</h3>
       <ul id="achievedList" class="achieved__list"></ul>
     </div>
 
     <ul id="historyList" class="history" aria-live="polite"></ul>
-    <div id="historyEmpty" class="empty" hidden>Nog geen metingen opgeslagen.</div>
+    <div id="historyEmpty" class="empty" hidden data-i18n="history.empty">Nog geen metingen opgeslagen.</div>
   </section>
 
   <!-- ───────────────────────── INSTELLINGEN ───────────────────────── -->
   <section id="view-settings" class="view" aria-labelledby="settings-h" hidden>
-    <h2 id="settings-h" class="view__title">Instellingen</h2>
+    <h2 id="settings-h" class="view__title" data-i18n="settings.title">Instellingen</h2>
 
     <div class="card form">
-      <h3 class="card__title">Doelen</h3>
+      <h3 class="card__title" data-i18n="settings.language">Taal</h3>
+      <div class="segmented" id="langSegmented" role="group" data-i18n-aria-label="a11y.language">
+        <button class="segmented__btn is-active" type="button" data-lang="system" aria-pressed="true" data-i18n="settings.language.system">Systeem</button>
+        <button class="segmented__btn"           type="button" data-lang="nl"     aria-pressed="false">Nederlands</button>
+        <button class="segmented__btn"           type="button" data-lang="en"     aria-pressed="false">English</button>
+      </div>
+      <p class="hint" data-i18n="settings.language.hint">Volgt je telefoon als je Systeem kiest. Datums en getallen gaan mee.</p>
+    </div>
+
+    <div class="card form">
+      <h3 class="card__title" data-i18n="settings.goals">Doelen</h3>
       <label class="field">
-        <span class="field__label">Startgewicht (kg)</span>
-        <input type="text" id="setStart" class="input" inputmode="decimal" placeholder="Bijv. 95,0">
+        <span class="field__label" data-i18n="settings.startWeight">Startgewicht (kg)</span>
+        <input type="text" id="setStart" class="input" inputmode="decimal" data-i18n-placeholder="settings.startPlaceholder">
       </label>
       <label class="field">
-        <span class="field__label">Streefgewicht (kg)</span>
-        <input type="text" id="setGoal" class="input" inputmode="decimal" placeholder="Bijv. 80,0">
+        <span class="field__label" data-i18n="settings.goalWeight">Streefgewicht (kg)</span>
+        <input type="text" id="setGoal" class="input" inputmode="decimal" data-i18n-placeholder="settings.goalPlaceholder">
       </label>
       <label class="field">
-        <span class="field__label">Lengte (cm) <span class="field__opt">— voor je BMI</span></span>
-        <input type="number" id="setHeight" class="input" inputmode="numeric" step="1" min="100" max="250" placeholder="Bijv. 182">
+        <span class="field__label"><span data-i18n="settings.height">Lengte (cm)</span> <span class="field__opt" data-i18n="settings.heightHint">— voor je BMI</span></span>
+        <input type="number" id="setHeight" class="input" inputmode="numeric" step="1" min="100" max="250" data-i18n-placeholder="settings.heightPlaceholder">
       </label>
       <p id="bmiOut" class="hint"></p>
     </div>
 
     <div class="card form">
-      <h3 class="card__title">Herinnering</h3>
+      <h3 class="card__title" data-i18n="reminder.title">Herinnering</h3>
       <label class="switch">
         <input type="checkbox" id="setReminder">
         <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
-        <span class="switch__label">Herinnering om te wegen</span>
+        <span class="switch__label" data-i18n="reminder.toggle">Herinnering om te wegen</span>
       </label>
       <div id="reminderOptions" class="reminder-opts" hidden>
         <div class="field">
-          <span class="field__label">Hoe vaak</span>
-          <div class="segmented segmented--2" id="freqSegmented" role="group" aria-label="Hoe vaak herinneren">
-            <button type="button" class="segmented__btn is-active" data-freq="daily"  aria-pressed="true">Elke dag</button>
-            <button type="button" class="segmented__btn"           data-freq="weekly" aria-pressed="false">1&times; per week</button>
+          <span class="field__label" data-i18n="reminder.howOften">Hoe vaak</span>
+          <div class="segmented segmented--2" id="freqSegmented" role="group" data-i18n-aria-label="a11y.frequency">
+            <button type="button" class="segmented__btn is-active" data-freq="daily"  aria-pressed="true" data-i18n="reminder.daily">Elke dag</button>
+            <button type="button" class="segmented__btn"           data-freq="weekly" aria-pressed="false" data-i18n="reminder.weekly">1&times; per week</button>
           </div>
         </div>
 
         <label class="field" id="reminderWeekdayField" hidden>
-          <span class="field__label">Op welke dag</span>
-          <select id="setWeekday" class="input">
-            <option value="1">maandag</option>
-            <option value="2">dinsdag</option>
-            <option value="3">woensdag</option>
-            <option value="4">donderdag</option>
-            <option value="5">vrijdag</option>
-            <option value="6">zaterdag</option>
-            <option value="0">zondag</option>
-          </select>
+          <span class="field__label" data-i18n="reminder.whichDay">Op welke dag</span>
+          <select id="setWeekday" class="input"></select>
         </label>
 
         <label class="field">
-          <span class="field__label">Tijdstip</span>
+          <span class="field__label" data-i18n="reminder.time">Tijdstip</span>
           <input type="time" id="setReminderTime" class="input" value="08:00">
         </label>
       </div>
       <div class="btnrow">
-        <button type="button" class="btn btn--ghost btn--sm" id="testNotifBtn">Test melding</button>
-        <button type="button" class="btn btn--ghost btn--sm" id="icsBtn">Agenda-afspraak</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="testNotifBtn" data-i18n="reminder.test">Test melding</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="icsBtn" data-i18n="reminder.calendar">Agenda-afspraak</button>
       </div>
       <p id="notifStatus" class="hint"></p>
     </div>
 
     <div class="card form">
-      <h3 class="card__title">Gegevens</h3>
-      <p class="hint hint--tight">Je metingen staan alleen op dit apparaat. Maak af en toe een back-up.</p>
+      <h3 class="card__title" data-i18n="data.title">Gegevens</h3>
+      <p class="hint hint--tight" data-i18n="data.hint">Je metingen staan alleen op dit apparaat. Maak af en toe een back-up.</p>
       <div class="btnrow">
-        <button type="button" class="btn btn--ghost btn--sm" id="exportJsonBtn">Back-up maken</button>
-        <button type="button" class="btn btn--ghost btn--sm" id="importBtn">Back-up terugzetten</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="exportJsonBtn" data-i18n="data.backup">Back-up maken</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="importBtn" data-i18n="data.restore">Back-up terugzetten</button>
         <input type="file" id="importFile" accept="application/json,.json" hidden>
       </div>
       <p id="backupStatus" class="hint"></p>
-      <button type="button" class="btn btn--danger btn--block" id="wipeBtn">Alle gegevens wissen</button>
+      <button type="button" class="btn btn--danger btn--block" id="wipeBtn" data-i18n="data.wipe">Alle gegevens wissen</button>
     </div>
 
     <div class="card form">
-      <h3 class="card__title">Deel de app</h3>
+      <h3 class="card__title" data-i18n="share.app.title">Deel de app</h3>
       <p class="hint hint--tight">
         Stuur de link door. Wie hem opent kan de app op zijn eigen beginscherm zetten —
         met zijn eigen metingen, die op zijn eigen telefoon blijven. Je deelt geen
@@ -281,16 +283,16 @@
       </p>
       <div class="applink" id="appLink"></div>
       <div class="btnrow">
-        <button type="button" class="btn btn--ghost btn--sm" id="copyLinkBtn">Kopieer link</button>
-        <button type="button" class="btn btn--primary btn--sm" id="shareAppBtn">Delen</button>
+        <button type="button" class="btn btn--ghost btn--sm" id="copyLinkBtn" data-i18n="share.app.copy">Kopieer link</button>
+        <button type="button" class="btn btn--primary btn--sm" id="shareAppBtn" data-i18n="share.app.share">Delen</button>
       </div>
     </div>
 
     <div class="card form">
-      <h3 class="card__title">Privacy</h3>
+      <h3 class="card__title" data-i18n="privacy.title">Privacy</h3>
 
       <div class="privacy">
-        <h4 class="privacy__kop">Wat op dit apparaat blijft</h4>
+        <h4 class="privacy__kop" data-i18n="privacy.localTitle">Wat op dit apparaat blijft</h4>
         <p class="privacy__tekst">
           Je metingen, notities, doelen, lengte en mijlpalen staan in de opslag van deze
           browser. Ze worden nergens heen gestuurd en niemand anders kan erbij — ook de
@@ -299,7 +301,7 @@
       </div>
 
       <div class="privacy">
-        <h4 class="privacy__kop">Wat de app wél verstuurt</h4>
+        <h4 class="privacy__kop" data-i18n="privacy.sendTitle">Wat de app wél verstuurt</h4>
         <p class="privacy__tekst">
           Hoogstens één keer per dag stuurt de app een leeg berichtje naar een teller.
           Daarin staat niets anders dan om wat voor gebeurtenis het gaat: een opening
@@ -322,26 +324,26 @@
       <label class="switch">
         <input type="checkbox" id="setTelemetrie" checked>
         <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
-        <span class="switch__label">Meetellen in het gebruikersaantal</span>
+        <span class="switch__label" data-i18n="privacy.counted">Meetellen in het gebruikersaantal</span>
       </label>
       <p id="telemetrieStatus" class="hint"></p>
     </div>
 
-    <p class="version">Afvalapp · werkt offline · <span id="appVersion"></span></p>
+    <p class="version" id="versionLine"></p>
   </section>
 
 </main>
 
-<nav class="tabbar" aria-label="Hoofdnavigatie">
-  <button class="tab is-active" data-view="today"    aria-current="page"><span class="tab__glyph" aria-hidden="true">⊕</span><span class="tab__label">Vandaag</span></button>
-  <button class="tab"           data-view="chart"><span class="tab__glyph" aria-hidden="true">◺</span><span class="tab__label">Grafiek</span></button>
-  <button class="tab"           data-view="history"><span class="tab__glyph" aria-hidden="true">☰</span><span class="tab__label">Historie</span></button>
-  <button class="tab"           data-view="settings"><span class="tab__glyph" aria-hidden="true">⚙</span><span class="tab__label">Instellingen</span></button>
+<nav class="tabbar" data-i18n-aria-label="a11y.mainNav">
+  <button class="tab is-active" data-view="today"    aria-current="page"><span class="tab__glyph" aria-hidden="true">⊕</span><span class="tab__label" data-i18n="nav.today">Vandaag</span></button>
+  <button class="tab"           data-view="chart"><span class="tab__glyph" aria-hidden="true">◺</span><span class="tab__label" data-i18n="nav.chart">Grafiek</span></button>
+  <button class="tab"           data-view="history"><span class="tab__glyph" aria-hidden="true">☰</span><span class="tab__label" data-i18n="nav.history">Historie</span></button>
+  <button class="tab"           data-view="settings"><span class="tab__glyph" aria-hidden="true">⚙</span><span class="tab__label" data-i18n="nav.settings">Instellingen</span></button>
 </nav>
 
 <dialog id="setupDialog" class="modal" aria-labelledby="setupTitle">
   <form id="setupForm" class="modal__form" autocomplete="off">
-    <h2 class="modal__title" id="setupTitle">Nog even aanvullen</h2>
+    <h2 class="modal__title" id="setupTitle" data-i18n="setup.title">Nog even aanvullen</h2>
     <p class="modal__intro" id="setupIntro"></p>
 
     <label class="field" id="setupGoalField">
@@ -357,15 +359,15 @@
     <p id="setupError" class="hint hint--error"></p>
 
     <div class="modal__buttons">
-      <button type="button" class="btn btn--ghost" id="setupLater">Later</button>
-      <button type="submit" class="btn btn--primary">Opslaan</button>
+      <button type="button" class="btn btn--ghost" id="setupLater" data-i18n="later">Later</button>
+      <button type="submit" class="btn btn--primary" data-i18n="setup.save">Opslaan</button>
     </div>
   </form>
 </dialog>
 
 <dialog id="shareDialog" class="modal" aria-labelledby="shareTitle">
   <div class="modal__form">
-    <h2 class="modal__title" id="shareTitle">Voortgang delen</h2>
+    <h2 class="modal__title" id="shareTitle" data-i18n="sharecard.title">Voortgang delen</h2>
 
     <div id="sharePreview" class="share__preview"></div>
     <p id="shareLeeg" class="hint" hidden></p>
@@ -373,13 +375,13 @@
     <label class="switch switch--compact">
       <input type="checkbox" id="shareWeights">
       <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
-      <span class="switch__label">Mijn gewicht in kilo&#39;s meesturen</span>
+      <span class="switch__label" data-i18n="sharecard.includeWeights">Mijn gewicht in kilo&#39;s meesturen</span>
     </label>
-    <p class="hint hint--tight">Zonder vinkje ziet niemand wat je weegt &mdash; alleen hoeveel eraf is.</p>
+    <p class="hint hint--tight" data-i18n="sharecard.hint">Zonder vinkje ziet niemand wat je weegt &mdash; alleen hoeveel eraf is.</p>
 
     <div class="modal__buttons">
-      <button type="button" class="btn btn--ghost" id="shareClose">Sluiten</button>
-      <button type="button" class="btn btn--primary" id="shareGo">Delen</button>
+      <button type="button" class="btn btn--ghost" id="shareClose" data-i18n="sharecard.close">Sluiten</button>
+      <button type="button" class="btn btn--primary" id="shareGo" data-i18n="sharecard.share">Delen</button>
     </div>
   </div>
 </dialog>
@@ -387,14 +389,14 @@
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
 <div id="updateBanner" class="install install--update" hidden>
-  <span class="install__text">Er staat een nieuwe versie van Afvalapp klaar.</span>
-  <button type="button" class="btn btn--primary btn--sm" id="updateBtn">Vernieuwen</button>
+  <span class="install__text" id="updateText">Er staat een nieuwe versie klaar.</span>
+  <button type="button" class="btn btn--primary btn--sm" id="updateBtn" data-i18n="update.refresh">Vernieuwen</button>
 </div>
 
 <div id="installBanner" class="install" hidden>
   <span class="install__text" id="installText">Zet Afvalapp op je beginscherm voor herinneringen.</span>
-  <button type="button" class="btn btn--primary btn--sm" id="installBtn">Installeren</button>
-  <button type="button" class="iconbtn iconbtn--sm" id="installClose" aria-label="Sluiten">✕</button>
+  <button type="button" class="btn btn--primary btn--sm" id="installBtn" data-i18n="install.button">Installeren</button>
+  <button type="button" class="iconbtn iconbtn--sm" id="installClose" data-i18n-aria-label="a11y.close">✕</button>
 </div>
 
 <script type="module" src="js/app.js"></script>

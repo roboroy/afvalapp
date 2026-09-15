@@ -1,8 +1,8 @@
 {
-  "name": "Afvalapp — gewicht bijhouden",
-  "short_name": "Afvalapp",
-  "description": "Houd je gewicht bij, stel een dagelijkse herinnering in en zie je verloop per dag, week, maand en jaar.",
-  "lang": "nl",
+  "name": "Private Scale",
+  "short_name": "Private",
+  "description": "Track your weight, set reminders and see your trend by day, week, month and year. Your data stays on your phone.",
+  "lang": "en",
   "dir": "ltr",
   "start_url": ".",
   "scope": ".",
@@ -41,8 +41,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Gewicht invullen",
-      "short_name": "Wegen",
+      "name": "Add your weight",
+      "short_name": "Weigh in",
       "url": "./?quick=1",
       "icons": [
         {
@@ -53,8 +53,8 @@
       ]
     },
     {
-      "name": "Grafiek bekijken",
-      "short_name": "Grafiek",
+      "name": "View chart",
+      "short_name": "Chart",
       "url": "./?view=chart",
       "icons": [
         {

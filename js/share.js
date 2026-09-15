@@ -11,6 +11,8 @@ import {
   fmtKg, fmtDelta, fmtDateLong, fromISO, addDays,
 } from './store.js';
 
+import { t } from './i18n.js';
+
 const W = 1080;
 const H = 1080;
 const PAD = 84;
@@ -140,7 +142,7 @@ function tekenGrafiek(ctx, punten, vak, toonAsLabels) {
  */
 export function kanDelen(entries) {
   if (entries.length < 3 || !hasTrend(entries)) {
-    return { kan: false, reden: 'Je hebt minstens drie metingen nodig voordat er een trend te delen valt.' };
+    return { kan: false, reden: t('card.tooFew') };
   }
   return { kan: true, reden: '' };
 }
@@ -183,7 +185,7 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
   ctx.fillStyle = KLEUR.vaag;
   ctx.font = f(650, 28);
   ctx.letterSpacing = '4px';
-  ctx.fillText('MIJN VOORTGANG', W / 2, 190);
+  ctx.fillText(t('card.title'), W / 2, 190);
   ctx.letterSpacing = '0px';
 
   /* het grote getal */
@@ -194,7 +196,7 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
 
   ctx.fillStyle = KLEUR.zacht;
   ctx.font = f(450, 34);
-  ctx.fillText(`sinds ${fmtDateLong(entries[0].date)}`, W / 2, 378);
+  ctx.fillText(t('card.since', { date: fmtDateLong(entries[0].date) }), W / 2, 378);
 
   /* grafiek */
   tekenGrafiek(ctx, lijnPunten(entries), { x: PAD, y: 440, b: W - PAD * 2, h: 300 }, includeWeights);
@@ -223,21 +225,21 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
       ctx.fillStyle = KLEUR.vaag;
       ctx.fillText(`${fmtKg(start)} kg`, PAD, y);
       ctx.textAlign = 'right';
-      ctx.fillText(`doel ${fmtKg(doel)} kg`, W - PAD, y);
+      ctx.fillText(t('card.goal', { kg: fmtKg(doel) }), W - PAD, y);
       ctx.textAlign = 'center';
       ctx.fillStyle = KLEUR.tekst;
       ctx.fillText(`${Math.round(pct)}%`, W / 2, y);
     } else {
       ctx.textAlign = 'center';
       ctx.fillStyle = KLEUR.tekst;
-      ctx.fillText(`${Math.round(pct)}% van mijn doel`, W / 2, y);
+      ctx.fillText(t('card.pctOfGoal', { pct: Math.round(pct) }), W / 2, y);
     }
     y += 62;
   } else if (includeWeights) {
     ctx.textAlign = 'center';
     ctx.fillStyle = KLEUR.zacht;
     ctx.font = f(650, 32);
-    ctx.fillText(`nu ${fmtKg(nu)} kg`, W / 2, y);
+    ctx.fillText(t('card.now', { kg: fmtKg(nu) }), W / 2, y);
     y += 62;
   }
 
@@ -245,16 +247,17 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
   ctx.font = f(500, 30);
   ctx.textAlign = 'left';
   ctx.fillStyle = KLEUR.vaag;
-  const eenheid = reeks.unit === 'week' ? 'weken' : 'dagen';
   ctx.fillText(
-    reeks.count > 1 ? `${reeks.count} ${eenheid} op rij gewogen` : `${entries.length} metingen`,
+    reeks.count > 1
+      ? t(reeks.unit === 'week' ? 'card.weighedWeeks' : 'card.weighedDays', { n: reeks.count })
+      : t('card.measurements', { n: entries.length }),
     PAD, H - 116,
   );
 
   ctx.textAlign = 'right';
   ctx.fillStyle = KLEUR.accent;
   ctx.font = f(700, 30);
-  ctx.fillText('Afvalapp', W - PAD, H - 116);
+  ctx.fillText(t('app.name'), W - PAD, H - 116);
 
   return canvas;
 }
@@ -266,20 +269,20 @@ export function deelTekst(entries, settings, { includeWeights = false } = {}) {
   const verschil = nu - start;
   const doel = settings.goalWeight;
 
-  const delen = [`${fmtDelta(verschil)} kg sinds ${fmtDateLong(entries[0].date)}`];
+  const delen = [`${fmtDelta(verschil)} kg ${t('card.since', { date: fmtDateLong(entries[0].date) })}`];
 
   if (doel !== null && doel !== undefined && start > doel) {
     const pct = Math.max(0, Math.min(100, ((start - nu) / (start - doel)) * 100));
-    delen.push(`${Math.round(pct)}% van mijn doel`);
+    delen.push(t('card.pctOfGoal', { pct: Math.round(pct) }));
   }
   if (includeWeights) {
-    delen.push(`nu ${fmtKg(nu)} kg`);
+    delen.push(t('card.now', { kg: fmtKg(nu) }));
   }
   return delen.join(' · ');
 }
 
 /** Zet het canvas om in een bestand dat gedeeld kan worden. */
-export function canvasNaarBestand(canvas, naam = 'voortgang.png') {
+export function canvasNaarBestand(canvas, naam = 'progress.png') {
   return new Promise((resolve, reject) => {
     canvas.toBlob((blob) => {
       if (!blob) { reject(new Error('kon geen afbeelding maken')); return; }

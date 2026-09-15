@@ -3,6 +3,8 @@
    Alles staat in localStorage; er is geen server.
    ============================================================ */
 
+import { language, t } from './i18n.js';
+
 const K_ENTRIES    = 'afvalapp.entries.v1';
 const K_SETTINGS   = 'afvalapp.settings.v1';
 const K_MILESTONES = 'afvalapp.milestones.v1';
@@ -16,6 +18,7 @@ export const DEFAULT_SETTINGS = {
   reminderFrequency: 'daily',   // 'daily' | 'weekly'
   reminderWeekday: 1,           // 0 = zondag … 6 = zaterdag; alleen bij 'weekly'
   theme: 'system',
+  language: 'system',        // 'system' | 'en' | 'nl'
   lastReminderDate: null,   // YYYY-MM-DD waarop de melding al getoond is
   milestonesBackfilled: false,  // eenmalige inhaalslag over bestaande historie
   setupDeferredOn: null,        // YYYY-MM-DD waarop 'Later' gekozen is
@@ -88,44 +91,87 @@ export function isoWeekOf(date) {
 
 /* ── Nederlandse formattering ───────────────────────────────── */
 
-const MONTHS_SHORT = ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
-const MONTHS_LONG  = ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
-                      'juli', 'augustus', 'september', 'oktober', 'november', 'december'];
-const DAYS_SHORT   = ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'];
-const DAYS_LONG    = ['zondag', 'maandag', 'dinsdag', 'woensdag',
-                      'donderdag', 'vrijdag', 'zaterdag'];
+/* ── Nederlandse formattering ───────────────────────────────── */
+/* Alles hieronder volgt de taal die in i18n.js actief is. Waar eerst
+   handgeschreven maand- en dagnamen stonden doet Intl het werk; dat scheelt
+   vier arrays en klopt meteen voor elke taal die we erbij zetten. */
 
-export const monthShort  = (i) => MONTHS_SHORT[i];
-export const monthLong   = (i) => MONTHS_LONG[i];
-export const weekdayLong = (i) => DAYS_LONG[i];
+const cacheGetal = new Map();
+const cacheDatum = new Map();
 
-/** 82.4 → "82,4" */
+function getalOpmaak(decimals) {
+  const sleutel = `${language()}:${decimals}`;
+  if (!cacheGetal.has(sleutel)) {
+    cacheGetal.set(sleutel, new Intl.NumberFormat(language(), {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    }));
+  }
+  return cacheGetal.get(sleutel);
+}
+
+function datumOpmaak(opties, naam) {
+  const sleutel = `${language()}:${naam}`;
+  if (!cacheDatum.has(sleutel)) {
+    cacheDatum.set(sleutel, new Intl.DateTimeFormat(language(), opties));
+  }
+  return cacheDatum.get(sleutel);
+}
+
+/** Losse maand- en dagnamen, nog gebruikt voor de koppen in de historie. */
+export function monthLong(i) {
+  return datumOpmaak({ month: 'long' }, 'maandLang').format(new Date(2021, i, 1));
+}
+
+export function monthShort(i) {
+  return datumOpmaak({ month: 'short' }, 'maandKort').format(new Date(2021, i, 1));
+}
+
+export function weekdayLong(i) {
+  // 3 januari 2021 was een zondag, dus index 0 valt op die datum.
+  return datumOpmaak({ weekday: 'long' }, 'dagLang').format(new Date(2021, 0, 3 + i));
+}
+
+/** 82.4 → "82,4" in het Nederlands, "82.4" in het Engels. */
 export function fmtKg(v, decimals = 1) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
-  return v.toFixed(decimals).replace('.', ',');
+  return getalOpmaak(decimals).format(v);
 }
 
-/** -1.2 → "−1,2"  ·  +0.3 → "+0,3"  ·  0 → "0,0" */
+/** -1.2 → "−1,2" · +0.3 → "+0,3" · 0 → "0,0" */
 export function fmtDelta(v, decimals = 1) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
-  const rounded = Number(v.toFixed(decimals));
-  if (rounded === 0) return `0,${'0'.repeat(decimals)}`;
-  const sign = rounded > 0 ? '+' : '−';
-  return sign + Math.abs(rounded).toFixed(decimals).replace('.', ',');
+  const afgerond = Number(v.toFixed(decimals));
+  const getal = getalOpmaak(decimals).format(Math.abs(afgerond));
+  if (afgerond === 0) return getal;
+  // Een echt minteken, geen koppelteken — dat leest beter in grote cijfers.
+  return (afgerond > 0 ? '+' : '\u2212') + getal;
 }
 
-/** '2026-09-02' → 'wo 2 sep 2026' */
+/** '2026-09-02' → 'wo 2 sep 2026' / 'Wed 2 Sep 2026' */
 export function fmtDateLong(iso) {
-  const d = fromISO(iso);
-  return `${DAYS_SHORT[d.getDay()]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+  return datumOpmaak(
+    { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' },
+    'datumLang',
+  ).format(fromISO(iso));
 }
 
-/** '2026-09-02' → 'wo 2 sep' (jaar alleen als het niet dit jaar is) */
+/** Zelfde, maar het jaar alleen als het niet dit jaar is. */
 export function fmtDateShort(iso) {
   const d = fromISO(iso);
-  const sameYear = d.getFullYear() === new Date().getFullYear();
-  return `${DAYS_SHORT[d.getDay()]} ${d.getDate()} ${MONTHS_SHORT[d.getMonth()]}` +
-         (sameYear ? '' : ` ${d.getFullYear()}`);
+  const ditJaar = d.getFullYear() === new Date().getFullYear();
+  return datumOpmaak(
+    ditJaar
+      ? { weekday: 'short', day: 'numeric', month: 'short' }
+      : { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' },
+    ditJaar ? 'datumKort' : 'datumKortMetJaar',
+  ).format(d);
+}
+
+/** Opgemaakte tekst opnieuw laten berekenen na een taalwissel. */
+export function resetFormatCache() {
+  cacheGetal.clear();
+  cacheDatum.clear();
 }
 
 /* ── Metingen ───────────────────────────────────────────────── */
@@ -238,12 +284,13 @@ export function bmi(kg, heightCm) {
   return kg / (m * m);
 }
 
+/** @returns {string} een vertaalsleutel, niet de tekst zelf */
 export function bmiLabel(value) {
   if (value === null) return '';
-  if (value < 18.5) return 'ondergewicht';
-  if (value < 25)   return 'gezond gewicht';
-  if (value < 30)   return 'overgewicht';
-  return 'obesitas';
+  if (value < 18.5) return 'bmi.under';
+  if (value < 25)   return 'bmi.healthy';
+  if (value < 30)   return 'bmi.over';
+  return 'bmi.obese';
 }
 
 /** Voortschrijdend gemiddelde over een venster van `days` kalenderdagen. */
@@ -460,21 +507,36 @@ export function replaceMilestones(map) {
 const STREAK_DREMPELS = { dag: [7, 30, 100], week: [4, 12, 26] };
 
 /* Eén plek voor de teksten, zodat het vieren en het inhalen niet uiteenlopen. */
-const TEKST = {
+/* Een mijlpaal slaat een sleutel op, geen zin. Anders bevriest hij de taal
+   van het moment waarop je hem haalde en blijft die voor altijd staan. */
+const MIJLPAAL = {
   goal: (grens, start, goal) => grens === 100
-    ? { titel: 'Streefgewicht bereikt', tekst: `Je zit op ${fmtKg(goal)} kg. Dat was het doel.` }
-    : { titel: `${grens}% van de weg`,
-        tekst: `Je bent ${grens}% onderweg van ${fmtKg(start)} naar ${fmtKg(goal)} kg.` },
-  bmi30: () => ({ titel: 'Uit de obesitas-categorie',
-                  tekst: 'Je BMI is onder de 30. Dat is een echte gezondheidswinst.' }),
-  bmi25: () => ({ titel: 'Gezond gewicht',
-                  tekst: 'Je BMI is onder de 25 — dat geldt als een gezond gewicht.' }),
-  streak: (grens, unit) => {
-    const eenheid = unit === 'week' ? 'weken' : 'dagen';
-    return { titel: `${grens} ${eenheid} op rij`,
-             tekst: `Je hebt je ${grens} ${eenheid} achter elkaar gewogen. Dat volhouden is het halve werk.` };
-  },
+    ? { titelKey: 'ms.goalDone', tekstKey: 'ms.goalDoneBody', params: { goal } }
+    : { titelKey: 'ms.goalPart', tekstKey: 'ms.goalPartBody', params: { pct: grens, start, goal } },
+  bmi30: () => ({ titelKey: 'ms.bmi30', tekstKey: 'ms.bmi30Body', params: {} }),
+  bmi25: () => ({ titelKey: 'ms.bmi25', tekstKey: 'ms.bmi25Body', params: {} }),
+  streak: (grens, unit) => ({
+    titelKey: unit === 'week' ? 'ms.streakWeeks' : 'ms.streakDays',
+    tekstKey: 'ms.streakBody',
+    params: { n: grens, unitKey: unit === 'week' ? 'ms.unitWeeks' : 'ms.unitDays' },
+  }),
 };
+
+/**
+ * De tekst van een mijlpaal in de taal van nu. Mijlpalen die nog met vaste
+ * zinnen zijn opgeslagen (van vóór de vertaling) houden hun eigen tekst.
+ */
+export function milestoneText(m) {
+  if (!m.titelKey) return { titel: m.titel || '', tekst: m.tekst || '' };
+
+  const p = { ...m.params };
+  for (const k of ['start', 'goal']) {
+    if (typeof p[k] === 'number') p[k] = fmtKg(p[k]);
+  }
+  if (p.unitKey) p.unit = t(p.unitKey);
+
+  return { titel: t(m.titelKey, p), tekst: t(m.tekstKey, p) };
+}
 
 /**
  * Welke mijlpalen zijn er op dít moment gehaald, gegeven de stand van zaken?
@@ -489,7 +551,7 @@ function bereikteMijlpalen(entries, settings, peil, reeks) {
   if (peil !== null && start !== null && goal !== null && goal !== undefined && start > goal) {
     const pct = ((start - peil) / (start - goal)) * 100;
     for (const grens of [25, 50, 75, 100]) {
-      if (pct >= grens) uit.push({ id: `goal-${grens}`, ...TEKST.goal(grens, start, goal) });
+      if (pct >= grens) uit.push({ id: `goal-${grens}`, ...MIJLPAAL.goal(grens, start, goal) });
     }
   }
 
@@ -498,14 +560,14 @@ function bereikteMijlpalen(entries, settings, peil, reeks) {
   if (peil !== null && start !== null && settings.heightCm) {
     const nu = bmi(peil, settings.heightCm);
     const toen = bmi(start, settings.heightCm);
-    if (toen >= 30 && nu < 30) uit.push({ id: 'bmi-overgewicht', ...TEKST.bmi30() });
-    if (toen >= 25 && nu < 25) uit.push({ id: 'bmi-gezond', ...TEKST.bmi25() });
+    if (toen >= 30 && nu < 30) uit.push({ id: 'bmi-overgewicht', ...MIJLPAAL.bmi30() });
+    if (toen >= 25 && nu < 25) uit.push({ id: 'bmi-gezond', ...MIJLPAAL.bmi25() });
   }
 
   if (reeks) {
     for (const grens of STREAK_DREMPELS[reeks.unit] ?? []) {
       if (reeks.count >= grens) {
-        uit.push({ id: `streak-${reeks.unit}-${grens}`, ...TEKST.streak(grens, reeks.unit) });
+        uit.push({ id: `streak-${reeks.unit}-${grens}`, ...MIJLPAAL.streak(grens, reeks.unit) });
       }
     }
   }
@@ -528,7 +590,7 @@ export function checkMilestones(entries, settings) {
   const nieuw = [];
   for (const m of bereikteMijlpalen(entries, settings, peil, reeks)) {
     if (behaald[m.id]) continue;
-    behaald[m.id] = { date: vandaag, titel: m.titel, tekst: m.tekst };
+    behaald[m.id] = { date: vandaag, titelKey: m.titelKey, tekstKey: m.tekstKey, params: m.params };
     nieuw.push(m);
   }
 
@@ -583,9 +645,9 @@ export function backfillMilestones(entries, settings) {
   const datums = reeksDatums(entries, settings.reminderFrequency);
 
   let aantal = 0;
-  const leg = (id, date, titel, tekst) => {
+  const leg = (id, date, m) => {
     if (behaald[id]) return;
-    behaald[id] = { date, titel, tekst };
+    behaald[id] = { date, titelKey: m.titelKey, tekstKey: m.tekstKey, params: m.params };
     aantal++;
   };
 
@@ -596,14 +658,13 @@ export function backfillMilestones(entries, settings) {
     if (typeof peil !== 'number') continue;
 
     for (const m of bereikteMijlpalen(entries, settings, peil, null)) {
-      leg(m.id, entries[i].date, m.titel, m.tekst);
+      leg(m.id, entries[i].date, m);
     }
   }
 
   for (const grens of STREAK_DREMPELS[reeks.unit] ?? []) {
     if (!datums[grens]) continue;
-    const t = TEKST.streak(grens, reeks.unit);
-    leg(`streak-${reeks.unit}-${grens}`, datums[grens], t.titel, t.tekst);
+    leg(`streak-${reeks.unit}-${grens}`, datums[grens], MIJLPAAL.streak(grens, reeks.unit));
   }
 
   if (aantal) writeJson(K_MILESTONES, behaald);
@@ -690,13 +751,11 @@ export function buildSeries(entries, period, veld = 'kg') {
     const end = todayISO();
     const start = addDays(end, -29);
     let sel = entries.filter((e) => e.date >= start && e.date <= end);
-    let title = 'Laatste 30 dagen';
+    let title = t('chart.last30');
 
     if (sel.length < 2) {                      // te weinig recent — toon de laatste metingen
       sel = entries.slice(-30);
-      title = sel.length >= 2
-        ? `Laatste ${sel.length} metingen`
-        : 'Je metingen';
+      title = sel.length >= 2 ? t('chart.lastN', { n: sel.length }) : t('chart.yours');
     }
 
     const points = sel.map((e) => ({
@@ -711,7 +770,10 @@ export function buildSeries(entries, period, veld = 'kg') {
     }));
 
     const subtitle = points.length
-      ? `${fmtDateShort(points[0].date)} – ${fmtDateShort(points[points.length - 1].date)}`
+      ? t('chart.range', {
+          from: fmtDateShort(points[0].date),
+          to: fmtDateShort(points[points.length - 1].date),
+        })
       : '';
     return { points, mode: 'time', title, subtitle };
   }
@@ -726,7 +788,7 @@ export function buildSeries(entries, period, veld = 'kg') {
       (_first, key) => `wk ${Number(key.slice(6))}`,
       (first) => {
         const d = fromISO(first.date);
-        return `${MONTHS_SHORT[d.getMonth()]} ${d.getFullYear()}`;
+        return `${monthShort(d.getMonth())} ${d.getFullYear()}`;
       },
       veld,
     );
@@ -734,8 +796,8 @@ export function buildSeries(entries, period, veld = 'kg') {
     return {
       points: buckets,
       mode: 'bucket',
-      title: buckets.length >= 26 ? 'Laatste 26 weken' : 'Per week',
-      subtitle: buckets.length ? `${buckets.length} ${buckets.length === 1 ? 'week' : 'weken'} met metingen` : '',
+      title: t(buckets.length >= 26 ? 'chart.last26weeks' : 'chart.perWeek'),
+      subtitle: buckets.length ? t('chart.weeksWith', { n: buckets.length }) : '',
     };
   }
 
@@ -743,7 +805,7 @@ export function buildSeries(entries, period, veld = 'kg') {
     let buckets = bucketize(
       entries,
       (e) => e.date.slice(0, 7),
-      (_first, key) => MONTHS_SHORT[Number(key.slice(5, 7)) - 1],
+      (_first, key) => monthShort(Number(key.slice(5, 7)) - 1),
       (_first, key) => key.slice(0, 4),
       veld,
     );
@@ -751,8 +813,8 @@ export function buildSeries(entries, period, veld = 'kg') {
     return {
       points: buckets,
       mode: 'bucket',
-      title: buckets.length >= 24 ? 'Laatste 24 maanden' : 'Per maand',
-      subtitle: buckets.length ? `${buckets.length} ${buckets.length === 1 ? 'maand' : 'maanden'} met metingen` : '',
+      title: t(buckets.length >= 24 ? 'chart.last24months' : 'chart.perMonth'),
+      subtitle: buckets.length ? t('chart.monthsWith', { n: buckets.length }) : '',
     };
   }
 
@@ -761,7 +823,7 @@ export function buildSeries(entries, period, veld = 'kg') {
   return {
     points: buckets,
     mode: 'bucket',
-    title: 'Per jaar',
-    subtitle: buckets.length ? `${buckets.length} ${buckets.length === 1 ? 'jaar' : 'jaren'} met metingen` : '',
+    title: t('chart.perYear'),
+    subtitle: buckets.length ? t('chart.yearsWith', { n: buckets.length }) : '',
   };
 }

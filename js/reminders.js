@@ -15,6 +15,7 @@
    ============================================================ */
 
 import { todayISO } from './store.js';
+import { t } from './i18n.js';
 
 const TAG = 'afvalapp-weigh-in';
 
@@ -52,11 +53,12 @@ export async function requestPermission() {
 /* ── Melding tonen (via de service worker, zodat hij ook telt
       wanneer de app op de achtergrond staat) ─────────────────── */
 
-export async function showReminder(body = 'Tijd om je gewicht in te vullen.') {
+export async function showReminder(body) {
+  if (body === undefined) body = t('reminder.body');
   if (permissionState() !== 'granted') return false;
   try {
     const reg = await swReady();
-    await reg.showNotification('Afvalapp', {
+    await reg.showNotification(t('app.name'), {
       body,
       tag: TAG,
       renotify: true,
@@ -69,7 +71,7 @@ export async function showReminder(body = 'Tijd om je gewicht in te vullen.') {
     return true;
   } catch {
     try {
-      new Notification('Afvalapp', { body, tag: TAG });
+      new Notification(t('app.name'), { body, tag: TAG });
       return true;
     } catch {
       return false;
@@ -230,12 +232,12 @@ export function buildIcs(settings) {
     `T${String(d.getHours()).padStart(2, '0')}${String(d.getMinutes()).padStart(2, '0')}00`;
 
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Amsterdam';
-  const uid = `afvalapp-${Date.now()}@localhost`;
+  const uid = `private-scale-${Date.now()}@localhost`;
 
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//Afvalapp//NL',
+    'PRODID:-//Private Scale//EN',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
@@ -244,12 +246,12 @@ export function buildIcs(settings) {
     `DTSTART;TZID=${tz}:${local(start)}`,
     `DTEND;TZID=${tz}:${local(end)}`,
     weekly ? `RRULE:FREQ=WEEKLY;BYDAY=${ICS_DAYS[weekday]}` : 'RRULE:FREQ=DAILY',
-    'SUMMARY:Wegen — Afvalapp',
-    'DESCRIPTION:Vul je gewicht in de Afvalapp in.',
+    `SUMMARY:${t('ics.summary', { app: t('app.name') })}`,
+    `DESCRIPTION:${t('ics.description', { app: t('app.name') })}`,
     'BEGIN:VALARM',
     'TRIGGER:PT0M',
     'ACTION:DISPLAY',
-    'DESCRIPTION:Wegen — Afvalapp',
+    `DESCRIPTION:${t('ics.summary', { app: t('app.name') })}`,
     'END:VALARM',
     'END:VEVENT',
     'END:VCALENDAR',

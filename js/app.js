@@ -10,9 +10,15 @@ import {
   fmtKg, fmtDelta, fmtDateLong, fmtDateShort,
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
   trendWeight, trendAgo, hasTrend, forecast, currentStreak, waistSamenvatting,
+  resetFormatCache,
   checkMilestones, listMilestones, getMilestones, replaceMilestones, backfillMilestones,
+  milestoneText,
   backupStatus,
 } from './store.js';
+
+import {
+  t, setLanguage, language, onLanguageChange, missingKeys,
+} from './i18n.js';
 
 import { renderChart } from './charts.js';
 
@@ -76,6 +82,85 @@ function setDeltaClass(el, delta) {
   else if (r > 0) el.classList.add('is-up');
 }
 
+/* ── Taal ───────────────────────────────────────────────────── */
+
+/**
+ * Vult elk element met een data-i18n-attribuut. Zo staat de vertaling niet
+ * dubbel in de HTML en hoeft er bij een taalwissel niets herbouwd te worden.
+ */
+function applyStaticTranslations(root = document) {
+  for (const el of root.querySelectorAll('[data-i18n]')) {
+    el.textContent = t(el.dataset.i18n);
+  }
+  for (const el of root.querySelectorAll('[data-i18n-placeholder]')) {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  }
+  for (const el of root.querySelectorAll('[data-i18n-aria-label]')) {
+    el.setAttribute('aria-label', t(el.dataset.i18nAriaLabel));
+  }
+  for (const el of root.querySelectorAll('[data-i18n-title]')) {
+    el.setAttribute('title', t(el.dataset.i18nTitle));
+  }
+
+  // Teksten die niet in één sleutel passen omdat er iets in ingevuld moet.
+  document.title = t('app.title');
+  $('installText').textContent = opIOS() && !staatOpBeginscherm()
+    ? t('ios.install', { app: t('app.name') })
+    : t('install.prompt', { app: t('app.name') });
+  $('versionLine').textContent = t('version.line', { app: t('app.name'), version: APP_VERSION });
+  $('updateText').textContent = t('update.ready', { app: t('app.name') });
+  vulWeekdagen();
+}
+
+/** De weekdagen komen uit Intl, dus ze volgen vanzelf de gekozen taal. */
+function vulWeekdagen() {
+  const select = $('setWeekday');
+  const gekozen = String(settings.reminderWeekday ?? 1);
+  select.replaceChildren();
+  // Maandag eerst, zondag als laatste — zo leest een week in beide talen.
+  for (const i of [1, 2, 3, 4, 5, 6, 0]) {
+    const optie = document.createElement('option');
+    optie.value = String(i);
+    optie.textContent = weekdayLong(i);
+    select.append(optie);
+  }
+  select.value = gekozen;
+}
+
+const langButtons = document.querySelectorAll('#langSegmented .segmented__btn');
+
+function syncLangButtons() {
+  for (const b of langButtons) {
+    const actief = b.dataset.lang === (settings.language || 'system');
+    b.classList.toggle('is-active', actief);
+    b.setAttribute('aria-pressed', String(actief));
+  }
+}
+
+for (const btn of langButtons) {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.lang === settings.language) return;
+    settings = patchSettings({ language: btn.dataset.lang });
+    syncLangButtons();
+    setLanguage(settings.language);
+  });
+}
+
+// Eén plek die alles opnieuw opbouwt na een taalwissel.
+onLanguageChange(() => {
+  resetFormatCache();          // datums en getallen opnieuw laten opmaken
+  applyStaticTranslations();
+  renderToday();
+  renderBmi();
+  renderAchieved();
+  renderBackupLine();
+  renderAppLink();
+  renderTelemetrieStatus();
+  refreshReminderState();
+  if (!$('view-chart').hidden) renderChartView();
+  if (!$('view-history').hidden) renderHistory();
+});
+
 /* ── Platform ───────────────────────────────────────────────── */
 
 /**
@@ -104,7 +189,7 @@ function staatOpBeginscherm() {
 /* ── Thema ──────────────────────────────────────────────────── */
 
 const THEME_ORDER = ['system', 'light', 'dark'];
-const THEME_NAME  = { system: 'systeem', light: 'licht', dark: 'donker' };
+const THEME_KEY   = { system: 'theme.system', light: 'theme.light', dark: 'theme.dark' };
 
 function applyTheme(theme) {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme');
@@ -115,7 +200,7 @@ $('themeToggle').addEventListener('click', () => {
   const next = THEME_ORDER[(THEME_ORDER.indexOf(settings.theme) + 1) % THEME_ORDER.length];
   settings = patchSettings({ theme: next });
   applyTheme(next);
-  toast(`Thema: ${THEME_NAME[next]}`);
+  toast(t('theme.toast', { name: t(THEME_KEY[next]) }));
 });
 
 /* ── Navigatie ──────────────────────────────────────────────── */
@@ -150,7 +235,7 @@ function renderToday() {
   const toonTrend = hasTrend(entries);
   const trend = toonTrend ? trendWeight(entries) : null;
 
-  $('heroLabel').textContent = toonTrend ? 'Trendgewicht' : 'Huidig gewicht';
+  $('heroLabel').textContent = t(toonTrend ? 'today.trendWeight' : 'today.currentWeight');
   $('heroWeight').textContent = toonTrend ? fmtKg(trend) : (last ? fmtKg(last.kg) : '—');
 
   if (toonTrend) {
@@ -158,28 +243,28 @@ function renderToday() {
     const eerder = trendAgo(entries, 7);
     if (eerder !== null) {
       const d = trend - eerder;
-      deltaEl.textContent = `${fmtDelta(d)} kg in 7 dagen`;
+      deltaEl.textContent = t('today.deltaDays', { delta: fmtDelta(d) });
       setDeltaClass(deltaEl, d);
     } else {
       deltaEl.textContent = '';
       setDeltaClass(deltaEl, null);
     }
-    $('heroNote').textContent = 'Gemiddelde over 7 dagen — dempt dagelijkse schommelingen.';
-    $('heroDate').textContent = `Meting ${fmtDateShort(last.date)}: ${fmtKg(last.kg)} kg`;
+    $('heroNote').textContent = t('today.trendNote');
+    $('heroDate').textContent = t('today.measured', { date: fmtDateShort(last.date), kg: fmtKg(last.kg) });
   } else if (entries.length >= 2) {
     const prev = entries[entries.length - 2];
     const d = last.kg - prev.kg;
-    deltaEl.textContent = `${fmtDelta(d)} kg sinds ${fmtDateShort(prev.date)}`;
+    deltaEl.textContent = t('today.deltaSince', { delta: fmtDelta(d), date: fmtDateShort(prev.date) });
     setDeltaClass(deltaEl, d);
-    $('heroNote').textContent = 'Vanaf drie metingen toont de app je trendgewicht.';
-    $('heroDate').textContent = `Laatste meting: ${fmtDateLong(last.date)}`;
+    $('heroNote').textContent = t('today.trendSoon');
+    $('heroDate').textContent = t('today.lastMeasured', { date: fmtDateLong(last.date) });
   } else {
     deltaEl.textContent = '';
     setDeltaClass(deltaEl, null);
     $('heroNote').textContent = '';
     $('heroDate').textContent = last
-      ? `Laatste meting: ${fmtDateLong(last.date)}`
-      : 'Nog geen meting — vul hieronder je gewicht in.';
+      ? t('today.lastMeasured', { date: fmtDateLong(last.date) })
+      : t('today.noMeasurement');
   }
 
   /* doel */
@@ -199,8 +284,8 @@ function renderToday() {
     $('goalPct').textContent = `${Math.round(pct)}%`;
     const left = peil - goal;
     $('goalRemaining').textContent = left <= 0
-      ? 'Doel gehaald! 🎉'
-      : `nog ${fmtKg(left)} kg te gaan`;
+      ? t('goal.reached')
+      : t('goal.remaining', { kg: fmtKg(left) });
 
     renderForecast(entries, goal);
   } else {
@@ -233,7 +318,7 @@ function renderToday() {
   renderBackupLine();
 
   const streak = currentStreak(entries, settings.reminderFrequency);
-  $('statStreakLabel').textContent = streak.unit === 'week' ? 'Weken op rij' : 'Dagen op rij';
+  $('statStreakLabel').textContent = t(streak.unit === 'week' ? 'stat.streakWeeks' : 'stat.streakDays');
   $('statStreak').textContent = String(streak.count);
 
   /* hint bij het formulier */
@@ -247,14 +332,12 @@ function appAdres() {
   return new URL('.', location.href).href;
 }
 
-const DEEL_TEKST =
-  'Ik gebruik deze app om mijn gewicht bij te houden. Hij werkt offline en ' +
-  'je metingen blijven op je eigen telefoon.';
+
 
 async function kopieerNaarKlembord(tekst) {
   try {
     await navigator.clipboard.writeText(tekst);
-    toast('Link gekopieerd');
+    toast(t('toast.linkCopied'));
     return true;
   } catch {
     // Het klembord mag geweigerd worden. Dan de link maar selecteren, zodat
@@ -266,9 +349,9 @@ async function kopieerNaarKlembord(tekst) {
       const selectie = window.getSelection();
       selectie.removeAllRanges();
       selectie.addRange(bereik);
-      toast('Kopiëren mocht niet — de link staat geselecteerd');
+      toast(t('toast.copyBlocked'));
     } catch {
-      toast('Kopiëren lukte niet. Selecteer de link met de hand.');
+      toast(t('toast.copyFailed'));
     }
     return false;
   }
@@ -278,7 +361,7 @@ $('shareAppBtn').addEventListener('click', async () => {
   const url = appAdres();
   if (typeof navigator.share === 'function') {
     try {
-      await navigator.share({ title: 'Afvalapp', text: DEEL_TEKST, url });
+      await navigator.share({ title: t('app.name'), text: t('share.appText'), url });
       return;
     } catch (err) {
       // Het deelmenu wegtikken is geen fout; dan doen we verder niets.
@@ -301,18 +384,16 @@ function renderAppLink() {
 function renderTelemetrieStatus() {
   const el = $('telemetrieStatus');
   if (!tellerIngesteld()) {
-    el.textContent = 'De teller is nog niet ingesteld, dus de app verstuurt op dit moment helemaal niets.';
+    el.textContent = t('counter.notSet');
     return;
   }
-  el.textContent = settings.telemetrieUit
-    ? 'Je telt niet mee. De app verstuurt niets.'
-    : 'Alleen een telling, hoogstens één keer per dag.';
+  el.textContent = t(settings.telemetrieUit ? 'counter.off' : 'counter.on');
 }
 
 $('setTelemetrie').addEventListener('change', (e) => {
   settings = patchSettings({ telemetrieUit: !e.target.checked });
   renderTelemetrieStatus();
-  toast(e.target.checked ? 'Je telt weer mee' : 'Je telt niet meer mee');
+  toast(t(e.target.checked ? 'toast.countedIn' : 'toast.countedOut'));
 });
 
 /* ── Delen ──────────────────────────────────────────────────── */
@@ -358,7 +439,7 @@ $('shareGo').addEventListener('click', async () => {
 
   try {
     const metGewicht = $('shareWeights').checked;
-    const bestand = await canvasNaarBestand(deelCanvas, `afvalapp-voortgang-${todayISO()}.png`);
+    const bestand = await canvasNaarBestand(deelCanvas, `private-scale-${todayISO()}.png`);
     const tekst = deelTekst(listEntries(), settings, { includeWeights: metGewicht });
 
     if (kanBestandDelen(bestand)) {
@@ -375,11 +456,11 @@ $('shareGo').addEventListener('click', async () => {
       a.remove();
       setTimeout(() => URL.revokeObjectURL(url), 2000);
       $('shareDialog').close();
-      toast('Afbeelding gedownload — je vindt hem bij je downloads');
+      toast(t('toast.imageSaved'));
     }
   } catch (err) {
     // Het deelmenu wegtikken gooit AbortError; dat is geen fout.
-    if (err && err.name !== 'AbortError') toast('Delen lukte niet op dit apparaat.');
+    if (err && err.name !== 'AbortError') toast(t('toast.shareFailed'));
   } finally {
     knop.disabled = false;
   }
@@ -411,12 +492,8 @@ function maybeAskSetup() {
   $('setupHeight').value = '';
   $('setupError').textContent = '';
 
-  $('setupIntro').textContent =
-    mist.goal && mist.lengte
-      ? 'Met je streefgewicht en je lengte kan de app je voortgang, je prognose en je BMI berekenen.'
-      : mist.goal
-        ? 'Met je streefgewicht kan de app je voortgang en je prognose naar dat doel berekenen.'
-        : 'Met je lengte kan de app je BMI berekenen, en de mijlpalen die daarbij horen.';
+  $('setupIntro').textContent = t(
+    mist.goal && mist.lengte ? 'setup.both' : mist.goal ? 'setup.goal' : 'setup.height');
 
   dlg.showModal();
 }
@@ -430,7 +507,7 @@ $('setupForm').addEventListener('submit', (e) => {
   if (mist.goal) {
     const kg = parseNum($('setupGoal').value);
     if (kg === null || kg < 20 || kg > 400) {
-      fout.textContent = 'Vul een streefgewicht in tussen 20 en 400 kg.';
+      fout.textContent = t('toast.setupGoal');
       $('setupGoal').focus();
       return;
     }
@@ -440,7 +517,7 @@ $('setupForm').addEventListener('submit', (e) => {
   if (mist.lengte) {
     const cm = parseNum($('setupHeight').value);
     if (cm === null || cm < 100 || cm > 250) {
-      fout.textContent = 'Vul een lengte in tussen 100 en 250 cm.';
+      fout.textContent = t('toast.setupHeight');
       $('setupHeight').focus();
       return;
     }
@@ -453,7 +530,7 @@ $('setupForm').addEventListener('submit', (e) => {
   fillSettingsForm();
   renderToday();
   renderBmi();
-  toast('Aangevuld — je voortgang wordt nu berekend');
+  toast(t('toast.setupSaved'));
 });
 
 $('setupLater').addEventListener('click', () => $('setupDialog').close());
@@ -477,10 +554,10 @@ function showMilestones(nieuw) {
     const blok = document.createElement('div');
     const titel = document.createElement('div');
     titel.className = 'celebrate__titel';
-    titel.textContent = m.titel;
+    titel.textContent = milestoneText(m).titel;
     const tekst = document.createElement('div');
     tekst.className = 'celebrate__tekst';
-    tekst.textContent = m.tekst;
+    tekst.textContent = milestoneText(m).tekst;
     blok.append(titel, tekst);
     lijst.append(blok);
   }
@@ -507,7 +584,7 @@ function renderAchieved() {
 
     const naam = document.createElement('span');
     naam.className = 'achieved__naam';
-    naam.textContent = m.titel;
+    naam.textContent = milestoneText(m).titel;
 
     const datum = document.createElement('span');
     datum.className = 'achieved__datum';
@@ -527,14 +604,14 @@ function renderWaist(entries) {
 
   kaart.hidden = false;
   $('waistNow').textContent = fmtKg(w.laatste);
-  $('waistDate').textContent = `gemeten ${fmtDateShort(w.datum)}`;
+  $('waistDate').textContent = t('waist.measuredOn', { date: fmtDateShort(w.datum) });
 
   const deltaEl = $('waistDelta');
   if (w.verschil === null) {
     deltaEl.textContent = '';
     setDeltaClass(deltaEl, null);
   } else {
-    deltaEl.textContent = `${fmtDelta(w.verschil)} cm sinds ${fmtDateShort(w.vanaf)}`;
+    deltaEl.textContent = t('waist.since', { delta: fmtDelta(w.verschil), date: fmtDateShort(w.vanaf) });
     setDeltaClass(deltaEl, w.verschil);
   }
 }
@@ -543,25 +620,22 @@ function renderWaist(entries) {
 function renderForecast(entries, goal) {
   const el = $('goalForecast');
   const f = forecast(entries, goal);
-  const tempo = f.rate === null ? null : `${fmtDelta(f.rate)} kg per week`;
+  const tempo = f.rate === null ? null : fmtDelta(f.rate);
 
   if (f.status === 'ok') {
     // Alleen de datum noemen. Er ook "over N weken" bij zetten leest prettig,
     // maar die afronding klopt zichtbaar niet met de datum als je narekent.
-    el.innerHTML = f.weeks <= 1
-      ? `Tempo <strong>${tempo}</strong>. Bij dit tempo zit je binnen een week op je doel.`
-      : `Tempo <strong>${tempo}</strong>. Bij dit tempo zit je rond ` +
-        `<strong>${fmtDateLong(f.eta)}</strong> op je doel.`;
+    el.textContent = f.weeks <= 1
+      ? t('forecast.withinWeek', { rate: tempo })
+      : t('forecast.date', { rate: tempo, date: fmtDateLong(f.eta) });
   } else if (f.status === 'doel-gehaald') {
-    el.textContent = 'Je zit op of onder je streefgewicht. Mooi gedaan.';
+    el.textContent = t('forecast.done');
   } else if (f.status === 'geen-daling') {
-    el.innerHTML = `Tempo <strong>${tempo}</strong>. Je gewicht daalt op dit moment niet, ` +
-                   `dus een datum voor je doel valt nog niet te geven.`;
+    el.textContent = t('forecast.flat', { rate: tempo });
   } else if (f.status === 'te-ver-weg') {
-    el.innerHTML = `Tempo <strong>${tempo}</strong>. In dit tempo duurt je doel nog jaren — ` +
-                   `misschien is een tussendoel handiger.`;
+    el.textContent = t('forecast.faraway', { rate: tempo });
   } else {
-    el.textContent = 'Na twee weken meten kan de app voorspellen wanneer je je doel haalt.';
+    el.textContent = t('forecast.tooLittle');
   }
 }
 
@@ -572,11 +646,11 @@ function syncFormHint() {
   const existing = date ? getEntry(date) : null;
   const hint = $('entryHint');
   if (existing) {
-    hint.textContent = `Er staat al ${fmtKg(existing.kg)} kg op ${fmtDateShort(date)}. Opslaan overschrijft die meting.`;
-    $('saveBtn').textContent = 'Bijwerken';
+    hint.textContent = t('form.exists', { kg: fmtKg(existing.kg), date: fmtDateShort(date) });
+    $('saveBtn').textContent = t('form.update');
   } else {
     hint.textContent = '';
-    $('saveBtn').textContent = 'Opslaan';
+    $('saveBtn').textContent = t('form.save');
   }
 }
 
@@ -610,25 +684,25 @@ $('entryForm').addEventListener('submit', (e) => {
   const kg = parseNum($('entryWeight').value);
 
   if (kg === null || kg < 20 || kg > 400) {
-    toast('Vul een gewicht in tussen 20 en 400 kg.');
+    toast(t('toast.weightRange'));
     $('entryWeight').focus();
     return;
   }
   if (date > todayISO()) {
-    toast('Je kunt geen datum in de toekomst kiezen.');
+    toast(t('toast.noFuture'));
     return;
   }
 
   const cm = parseNum($('entryWaist').value);
   if (cm !== null && (cm < 40 || cm > 200)) {
-    toast('Vul een middelomtrek in tussen 40 en 200 cm.');
+    toast(t('toast.waistRange'));
     $('entryWaist').focus();
     return;
   }
 
   const { ok, isNew } = saveEntry(date, kg, $('entryNote').value, cm);
   if (!ok) {
-    toast('Opslaan mislukt — is de opslag van je browser vol?');
+    toast(t('toast.saveFailed'));
     return;
   }
 
@@ -638,7 +712,9 @@ $('entryForm').addEventListener('submit', (e) => {
     $('setStart').value = fmtKg(kg);
   }
 
-  toast(isNew ? `${fmtKg(kg)} kg opgeslagen` : `${fmtDateShort(date)} bijgewerkt naar ${fmtKg(kg)} kg`);
+  toast(isNew
+    ? t('toast.saved', { kg: fmtKg(kg) })
+    : t('toast.updated', { date: fmtDateShort(date), kg: fmtKg(kg) }));
   $('entryNote').value = '';
   $('entryWaist').value = '';
   syncFormHint();
@@ -705,15 +781,14 @@ function renderChartView() {
   const empty = $('chartEmpty');
   const legend = $('chartLegend');
 
-  $('chartTitle').textContent = series.title || 'Grafiek';
+  $('chartTitle').textContent = series.title || t('nav.chart');
   $('chartSub').textContent = series.subtitle;
 
   if (!series.points.length) {
     host.replaceChildren();
     empty.hidden = false;
-    empty.innerHTML = maat === 'cm'
-      ? 'Nog geen middelomtrek in deze periode.<br>Vul er een in bij <strong>Vandaag</strong>.'
-      : 'Nog geen metingen in deze periode.<br>Vul je gewicht in bij <strong>Vandaag</strong>.';
+    empty.innerHTML = t(maat === 'cm' ? 'chart.emptyWaist' : 'chart.emptyWeight',
+                        { tab: t('nav.today') });
     legend.hidden = true;
     $('chartTrend').textContent = '';
     $('chartMin').textContent = $('chartAvg').textContent = $('chartMax').textContent = '—';
@@ -722,7 +797,7 @@ function renderChartView() {
 
   empty.hidden = true;
   legend.hidden = !(period === 'day' && series.points.length > 2);
-  $('legendMaat').textContent = maat === 'cm' ? 'Middel' : 'Gewicht';
+  $('legendMaat').textContent = t(maat === 'cm' ? 'chart.waist' : 'chart.weight');
 
   renderChart(host, {
     points: series.points,
@@ -810,13 +885,13 @@ function renderHistory() {
     const del = document.createElement('button');
     del.type = 'button';
     del.className = 'hitem__del';
-    del.setAttribute('aria-label', `Meting van ${fmtDateLong(e.date)} verwijderen`);
+    del.setAttribute('aria-label', t('a11y.deleteEntry', { date: fmtDateLong(e.date) }));
     del.textContent = '✕';
     del.addEventListener('click', (ev) => {
       ev.stopPropagation();
-      if (!confirm(`Meting van ${fmtDateLong(e.date)} verwijderen?`)) return;
+      if (!confirm(t('confirm.delete', { date: fmtDateLong(e.date) }))) return;
       deleteEntry(e.date);
-      toast('Meting verwijderd');
+      toast(t('toast.deleted'));
       renderHistory();
       renderToday();
     });
@@ -840,8 +915,8 @@ function renderBmi() {
   const out = $('bmiOut');
   const value = last && settings.heightCm ? bmi(last.kg, settings.heightCm) : null;
   out.textContent = value === null
-    ? 'Vul je lengte in om je BMI te zien.'
-    : `BMI: ${fmtKg(value)} — ${bmiLabel(value)} (bij ${fmtKg(last.kg)} kg).`;
+    ? t('bmi.noHeight')
+    : t('bmi.line', { value: fmtKg(value), label: t(bmiLabel(value)), kg: fmtKg(last.kg) });
 }
 
 function bindNumberSetting(inputId, key, { integer = false, min, max } = {}) {
@@ -854,7 +929,7 @@ function bindNumberSetting(inputId, key, { integer = false, min, max } = {}) {
     } else {
       let n = parseNum(raw);
       if (n === null || n < min || n > max) {
-        toast(`Vul een waarde in tussen ${min} en ${max}.`);
+        toast(t('toast.range', { min, max }));
         input.value = settings[key] === null ? '' : (integer ? String(settings[key]) : fmtKg(settings[key]));
         return;
       }
@@ -876,10 +951,13 @@ bindNumberSetting('setHeight', 'heightCm',    { min: 100, max: 250, integer: tru
 
 /** "elke dag om 08:00" of "elke maandag om 08:00" */
 function reminderPhrase(st = settings) {
-  const tijd = st.reminderTime || '08:00';
+  const time = st.reminderTime || '08:00';
   return st.reminderFrequency === 'weekly'
-    ? `elke ${weekdayLong(Number.isInteger(st.reminderWeekday) ? st.reminderWeekday : 1)} om ${tijd}`
-    : `elke dag om ${tijd}`;
+    ? t('reminder.everyWeekday', {
+        weekday: weekdayLong(Number.isInteger(st.reminderWeekday) ? st.reminderWeekday : 1),
+        time,
+      })
+    : t('reminder.everyDay', { time });
 }
 
 async function refreshReminderState() {
@@ -888,31 +966,29 @@ async function refreshReminderState() {
   $('reminderWeekdayField').hidden = settings.reminderFrequency !== 'weekly';
 
   if (!settings.reminderEnabled) {
-    status.textContent = 'Herinnering staat uit.';
+    status.textContent = t('reminder.off');
     return;
   }
 
   // Op een iPhone kan een webapp in een gewoon Safari-tabblad helemaal geen
   // meldingen tonen. Dat eerst zeggen, anders klopt de rest niet.
   if (opIOS() && !staatOpBeginscherm()) {
-    status.textContent = `Ingesteld op ${reminderPhrase()}. Zet de app eerst op je ` +
-      'beginscherm via de Deel-knop — in Safari zelf kan iOS geen meldingen tonen. ' +
-      'Daarna zie je de herinnering in elk geval zodra je de app opent.';
+    status.textContent = t('reminder.iosInstallFirst', { when: reminderPhrase() });
     return;
   }
 
   if (!notificationsSupported()) {
-    status.textContent = 'Meldingen worden niet ondersteund in deze browser. De agenda-afspraak werkt wel.';
+    status.textContent = t('reminder.unsupported');
     return;
   }
 
   const perm = permissionState();
   if (perm === 'denied') {
-    status.textContent = 'Meldingen zijn geblokkeerd. Zet ze aan bij de site-instellingen van je browser, of gebruik de agenda-afspraak.';
+    status.textContent = t('reminder.blocked');
     return;
   }
   if (perm !== 'granted') {
-    status.textContent = 'Meldingen zijn nog niet toegestaan.';
+    status.textContent = t('reminder.notYet');
     return;
   }
 
@@ -925,18 +1001,16 @@ async function refreshReminderState() {
 
   // iOS kent Periodic Background Sync niet; daar valt niets te wekken.
   if (opIOS()) {
-    status.textContent = `Ingesteld op ${wanneer}. Een webapp kan op een iPhone niet ` +
-      'op de achtergrond gewekt worden, dus je krijgt de melding zodra je de app opent. ' +
-      'Wil je zeker weten dat hij op tijd afgaat, gebruik dan de agenda-afspraak hierboven.';
+    status.textContent = t('reminder.iosBackground', { when: wanneer });
     return;
   }
 
   if (background === 'on') {
-    status.textContent = `Je krijgt ${wanneer} een melding, ook als de app dicht is.`;
+    status.textContent = t('reminder.background', { when: wanneer });
   } else if (!standalone) {
-    status.textContent = `Ingesteld op ${wanneer}. Zet de app op je beginscherm — pas dan mag Android je wekken terwijl de app dicht is. Tot die tijd zie je de herinnering zodra je de app opent.`;
+    status.textContent = t('reminder.needInstall', { when: wanneer });
   } else {
-    status.textContent = `Ingesteld op ${wanneer}. Android bepaalt zelf wanneer het achtergrondproces mag draaien, dus de melding kan iets later komen. De agenda-afspraak is de zekerste back-up.`;
+    status.textContent = t('reminder.androidTiming', { when: wanneer });
   }
 }
 
@@ -944,7 +1018,7 @@ async function onReminderFires() {
   const entries = listEntries();
   const hasToday = entries.some((e) => e.date === todayISO());
   if (hasToday) return;
-  await showReminder('Tijd om je gewicht in te vullen.');
+  await showReminder(t('reminder.body'));
   settings = patchSettings({ lastReminderDate: todayISO() });
 }
 
@@ -954,20 +1028,20 @@ $('setReminder').addEventListener('change', async (e) => {
   if (on && notificationsSupported() && permissionState() === 'default') {
     const result = await requestPermission();
     if (result !== 'granted') {
-      toast('Zonder toestemming kan de app je niet waarschuwen. De agenda-afspraak werkt wel.');
+      toast(t('toast.noPermission'));
     }
   }
 
   settings = patchSettings({ reminderEnabled: on });
   await refreshReminderState();
-  if (on && permissionState() === 'granted') toast(`Herinnering aan: ${reminderPhrase()}`);
+  if (on && permissionState() === 'granted') toast(t('toast.reminderOn', { when: reminderPhrase() }));
 });
 
 $('setReminderTime').addEventListener('change', async (e) => {
   const value = e.target.value || '08:00';
   settings = patchSettings({ reminderTime: value });
   await refreshReminderState();
-  toast(`Herinnering: ${reminderPhrase()}`);
+  toast(t('toast.reminder', { when: reminderPhrase() }));
 });
 
 const freqButtons = document.querySelectorAll('#freqSegmented .segmented__btn');
@@ -983,7 +1057,7 @@ for (const btn of freqButtons) {
     settings = patchSettings({ lastReminderDate: null });
     await refreshReminderState();
     renderToday();          // 'dagen op rij' wordt 'weken op rij'
-    toast(`Herinnering: ${reminderPhrase()}`);
+    toast(t('toast.reminder', { when: reminderPhrase() }));
   });
 }
 
@@ -1003,16 +1077,16 @@ $('setWeekday').addEventListener('change', async (e) => {
 });
 
 $('testNotifBtn').addEventListener('click', async () => {
-  if (!notificationsSupported()) { toast('Meldingen worden niet ondersteund.'); return; }
+  if (!notificationsSupported()) { toast(t('toast.notSupported')); return; }
   if (permissionState() === 'default') await requestPermission();
-  if (permissionState() !== 'granted') { toast('Meldingen zijn niet toegestaan.'); return; }
-  const ok = await showReminder('Zo ziet je dagelijkse herinnering eruit.');
-  toast(ok ? 'Melding verstuurd' : 'Melding kon niet worden getoond');
+  if (permissionState() !== 'granted') { toast(t('toast.notAllowed')); return; }
+  const ok = await showReminder(t('reminder.testBody'));
+  toast(t(ok ? 'toast.notifSent' : 'toast.notifFailed'));
 });
 
 $('icsBtn').addEventListener('click', () => {
-  download('afvalapp-herinnering.ics', buildIcs(settings), 'text/calendar');
-  toast('Open het bestand om het in je agenda te zetten');
+  download('private-scale-reminder.ics', buildIcs(settings), 'text/calendar');
+  toast(t('toast.icsSaved'));
 });
 
 /* gegevens */
@@ -1029,7 +1103,7 @@ function maakBackup() {
     milestones: getMilestones(),
     entries: entries.map(({ date, kg, cm, note }) => ({ date, kg, cm, note })),
   };
-  download(`afvalapp-backup-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
+  download(`private-scale-backup-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
 
   // We kunnen niet zien of het bestand ook echt bewaard is; op de knop
   // drukken is het beste wat we hebben.
@@ -1040,7 +1114,7 @@ function maakBackup() {
   });
   $('backupCard').hidden = true;
   renderBackupLine();
-  toast('Back-up gedownload');
+  toast(t('toast.backupSaved'));
 }
 
 /** Het kaartje op Vandaag dat om een back-up vraagt. */
@@ -1052,9 +1126,9 @@ function renderBackupNotice() {
   if (!st.nodig || uitgesteld) { card.hidden = true; return; }
 
   $('backupReden').textContent = st.laatst
-    ? `Er ${st.nieuwe === 1 ? 'staat 1 meting' : `staan ${st.nieuwe} metingen`} nog niet in een back-up. ` +
-      `De laatste was ${fmtDateShort(st.laatst)}.`
-    : `Je hebt ${st.totaal} metingen en nog geen back-up. Ze staan alleen op dit apparaat.`;
+    ? t(st.nieuwe === 1 ? 'backup.pendingOne' : 'backup.pending',
+        { n: st.nieuwe, date: fmtDateShort(st.laatst) })
+    : t('backup.notBackedUp', { n: st.totaal });
   card.hidden = false;
 }
 
@@ -1062,14 +1136,12 @@ function renderBackupNotice() {
 function renderBackupLine() {
   const st = backupStatus(listEntries(), settings);
   if (!st.laatst) {
-    $('backupStatus').textContent = st.totaal
-      ? 'Je hebt nog geen back-up gemaakt.'
-      : '';
+    $('backupStatus').textContent = st.totaal ? t('backup.none') : '';
     return;
   }
   $('backupStatus').textContent = st.nieuwe
-    ? `Laatste back-up: ${fmtDateLong(st.laatst)} — ${st.nieuwe} ${st.nieuwe === 1 ? 'meting' : 'metingen'} sindsdien.`
-    : `Laatste back-up: ${fmtDateLong(st.laatst)} — bij.`;
+    ? t('backup.since', { date: fmtDateLong(st.laatst), n: t('entries.count', { n: st.nieuwe }) })
+    : t('backup.upToDate', { date: fmtDateLong(st.laatst) });
 }
 
 $('exportJsonBtn').addEventListener('click', maakBackup);
@@ -1094,8 +1166,8 @@ $('exportCsvBtn').addEventListener('click', () => {
   const csv = rows
     .map((r) => r.map((c) => (/[";\n]/.test(c) ? `"${c.replace(/"/g, '""')}"` : c)).join(';'))
     .join('\r\n');
-  download(`afvalapp-${todayISO()}.csv`, csv, 'text/csv');
-  toast('CSV gedownload');
+  download(`private-scale-${todayISO()}.csv`, csv, 'text/csv');
+  toast(t('toast.csvSaved'));
 });
 
 $('importBtn').addEventListener('click', () => $('importFile').click());
@@ -1121,8 +1193,8 @@ $('importFile').addEventListener('change', async (e) => {
     }
 
     const count = Object.keys(map).length;
-    if (!count) { toast('Geen bruikbare metingen in dit bestand.'); return; }
-    if (!confirm(`${count} metingen gevonden. Dit vervangt je huidige metingen. Doorgaan?`)) return;
+    if (!count) { toast(t('toast.noUsable')); return; }
+    if (!confirm(t('confirm.restore', { n: count }))) return;
 
     replaceAllEntries(map);
     if (data.settings && typeof data.settings === 'object') {
@@ -1155,14 +1227,14 @@ $('importFile').addEventListener('change', async (e) => {
     renderBmi();
     renderAchieved();
     renderBackupLine();
-    toast(`${count} metingen teruggezet`);
+    toast(t('toast.restored', { n: count }));
   } catch (err) {
-    toast(`Bestand kon niet gelezen worden (${err.message}).`);
+    toast(t('toast.readFailed', { error: err.message }));
   }
 });
 
 $('wipeBtn').addEventListener('click', () => {
-  if (!confirm('Alles wissen? Al je metingen en instellingen verdwijnen van dit apparaat. Dit kan niet ongedaan gemaakt worden.')) return;
+  if (!confirm(t('confirm.wipe'))) return;
   wipeAll();
   settings = getSettings();          // milestonesBackfilled staat weer op false
   applyTheme(settings.theme);
@@ -1176,7 +1248,7 @@ $('wipeBtn').addEventListener('click', () => {
   renderBackupLine();
   $('milestoneCard').hidden = true;
   $('backupCard').hidden = true;
-  toast('Alle gegevens gewist');
+  toast(t('toast.wiped'));
 });
 
 function fillSettingsForm() {
@@ -1201,10 +1273,10 @@ async function nudgeIfDue() {
   if (!isDue(settings, hasToday)) return;
 
   if (!alreadyNudgedToday(settings)) {
-    await showReminder('Je hebt jezelf vandaag nog niet gewogen.');
+    await showReminder(t('reminder.bodyMissed'));
     settings = patchSettings({ lastReminderDate: todayISO() });
   }
-  toast('Je hebt jezelf vandaag nog niet gewogen.');
+  toast(t('toast.notWeighed'));
 }
 
 /* ── Installeren op het beginscherm ─────────────────────────── */
@@ -1225,9 +1297,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 function toonIOSInstallatieUitleg() {
   if (!opIOS() || staatOpBeginscherm() || settings.installDismissed) return;
 
-  $('installText').textContent =
-    'Zet Afvalapp op je beginscherm: tik op Deel en kies “Zet op beginscherm”. ' +
-    'Pas dan kan de app je herinneren.';
   $('installBtn').hidden = true;      // er valt hier niets te klikken
   $('installBanner').hidden = false;
 }
@@ -1238,7 +1307,7 @@ $('installBtn').addEventListener('click', async () => {
   deferredInstall.prompt();
   const { outcome } = await deferredInstall.userChoice;
   deferredInstall = null;
-  if (outcome === 'accepted') toast('Afvalapp staat nu op je beginscherm');
+  if (outcome === 'accepted') toast(t('toast.installed', { app: t('app.name') }));
 });
 
 $('installClose').addEventListener('click', () => {
@@ -1388,8 +1457,14 @@ function boot() {
   // Wij bepalen zelf waar de pagina heen scrolt, niet de browser.
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
+  // De taal moet vaststaan voordat er ook maar één datum of getal
+  // opgemaakt wordt, anders staat het eerste scherm in de verkeerde taal.
+  setLanguage(settings.language);
+  document.documentElement.lang = language();
+  applyStaticTranslations();
+  syncLangButtons();
+
   applyTheme(settings.theme);
-  $('appVersion').textContent = APP_VERSION;
 
   $('entryDate').max = todayISO();
   $('entryDate').min = addDays(todayISO(), -3650);
