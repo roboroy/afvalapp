@@ -281,6 +281,15 @@ const STRINGS = {
     'counter.notSet': 'The counter is not set up, so the app sends nothing at all right now.',
     'counter.off': 'You are not counted. The app sends nothing.',
     'counter.on': 'Only a count, at most once a day.',
+    'counter.figuresLoading': 'Fetching the figures\u2026',
+    'counter.figuresFailed': 'The figures could not be fetched.',
+    'counter.figures': 'Counted so far: {parts}.',
+    'counter.figuresNote':
+      'An opening counts once per device per day, so that number is not a headcount. '
+      + 'The home screens are: every device that installed the app counts once, ever.',
+    'counter.openings': { one: '{count} opening', other: '{count} openings' },
+    'counter.homescreens': { one: '{count} home screen', other: '{count} home screens' },
+    'counter.countries': { one: '{count} country', other: '{count} countries' },
 
     /* ── Setup dialog ── */
     'setup.both': 'With your goal weight and your height the app can work out your progress, your forecast and your BMI.',
@@ -578,6 +587,15 @@ const STRINGS = {
     'counter.notSet': 'De teller is nog niet ingesteld, dus de app verstuurt op dit moment helemaal niets.',
     'counter.off': 'Je telt niet mee. De app verstuurt niets.',
     'counter.on': 'Alleen een telling, hoogstens één keer per dag.',
+    'counter.figuresLoading': 'Cijfers ophalen\u2026',
+    'counter.figuresFailed': 'De cijfers zijn niet op te halen.',
+    'counter.figures': 'Tot nu toe geteld: {parts}.',
+    'counter.figuresNote':
+      'Een opening telt één keer per apparaat per dag, dus dat getal is geen aantal personen. '
+      + 'De beginschermen wél: elk apparaat dat de app installeerde telt één keer, voorgoed.',
+    'counter.openings': { one: '{count} opening', other: '{count} openingen' },
+    'counter.homescreens': { one: '{count} beginscherm', other: '{count} beginschermen' },
+    'counter.countries': { one: '{count} land', other: '{count} landen' },
 
     'setup.both': 'Met je streefgewicht en je lengte kan de app je voortgang, je prognose en je BMI berekenen.',
     'setup.goal': 'Met je streefgewicht kan de app je voortgang en je prognose naar dat doel berekenen.',

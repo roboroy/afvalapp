@@ -4,7 +4,7 @@
 
 // Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
 // app-bestanden. Verander deze regel niet met de hand.
-const VERSION    = 'private-scale-d8b3772cb1';
+const VERSION    = 'private-scale-d5870ed7f6';
 const ASSETS     = `${VERSION}-assets`;
 const CONFIG     = 'private-scale-config';
 const CONFIG_URL = '/__private_scale_config__';

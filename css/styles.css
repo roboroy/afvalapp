@@ -330,6 +330,12 @@ input[type="date"], input[type="time"] { min-height: 46px; }
 
 .hint { margin: 0; font-size: .8rem; color: var(--text-faint); line-height: 1.4; }
 .hint--tight { margin-top: -4px; }
+/* De getallen van de teller mogen iets meer opvallen dan de uitleg eromheen;
+   tabular-nums houdt de cijfers op dezelfde breedte als ze oplopen. */
+.hint--cijfers {
+  margin-top: 6px; color: var(--text-soft); font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
 .hint:empty { display: none; }
 
 /* ── Buttons ───────────────────────────────────────────────── */

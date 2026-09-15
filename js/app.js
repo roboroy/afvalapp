@@ -233,6 +233,7 @@ function herteken() {
   renderBackupLine();
   renderAppLink();
   renderTelemetrieStatus();
+  toonTelemetrieCijfers();
   refreshReminderState();
   if (!$('view-chart').hidden) renderChartView();
   if (!$('view-history').hidden) renderHistory();
@@ -297,6 +298,7 @@ function showView(name) {
   }
   if (name === 'chart') renderChartView();
   if (name === 'history') { renderHistory(); renderAchieved(); }
+  if (name === 'settings') laadTelemetrieCijfers();
   window.scrollTo({ top: 0 });
 }
 
@@ -468,6 +470,51 @@ function renderTelemetrieStatus() {
     return;
   }
   el.textContent = t(settings.telemetrieUit ? 'counter.off' : 'counter.on');
+}
+
+/* De geaggregeerde cijfers van de teller. Ze worden pas opgehaald als je
+   Instellingen opent: bij elke start een extra netwerkverzoek doen voor iets
+   waar je zelden naar kijkt, is zonde van de batterij en de verbinding. */
+let cijfers = null;          // null = nog niet opgehaald
+let cijfersMislukt = false;
+
+function toonTelemetrieCijfers() {
+  const el = $('telemetrieCijfers');
+  const noot = $('telemetrieCijfersNoot');
+
+  if (cijfersMislukt) {
+    el.hidden = false;
+    el.textContent = t('counter.figuresFailed');
+    noot.hidden = true;
+    return;
+  }
+  if (!cijfers) { el.hidden = true; noot.hidden = true; return; }
+
+  const landen = Object.keys(cijfers.countries || {}).length;
+  const getal = (n) => ({ n, count: fmtNum(n, 0) });
+  const delen = [
+    t('counter.openings', getal(cijfers.opens || 0)),
+    t('counter.homescreens', getal(cijfers.installs || 0)),
+  ];
+  if (landen) delen.push(t('counter.countries', getal(landen)));
+
+  el.hidden = false;
+  el.textContent = t('counter.figures', { parts: delen.join(' \u00b7 ') });
+  noot.hidden = false;
+}
+
+async function laadTelemetrieCijfers() {
+  if (!counterConfigured()) return;
+  if (cijfers) { toonTelemetrieCijfers(); return; }   // al binnen deze sessie
+
+  cijfersMislukt = false;
+  $('telemetrieCijfers').hidden = false;
+  $('telemetrieCijfers').textContent = t('counter.figuresLoading');
+  $('telemetrieCijfersNoot').hidden = true;
+
+  cijfers = await haalCijfers();
+  cijfersMislukt = !cijfers;
+  toonTelemetrieCijfers();
 }
 
 $('setTelemetrie').addEventListener('change', (e) => {

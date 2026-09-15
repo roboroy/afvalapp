@@ -99,6 +99,20 @@ Under **Settings → Privacy** this is spelled out in the app itself, with a
 switch to opt out. As long as no Worker address is filled in in
 `js/telemetry.js`, the app sends nothing at all.
 
+The totals are shown in the same place, under the switch: openings, home
+screens and how many countries they came from. They are fetched when you open
+Settings, not at every launch — a network request on every start for something
+you rarely look at is a waste of battery.
+
+Read the two numbers differently. **Openings** counts once per device per day,
+so a single person who weighs in for a month adds thirty; it is not a headcount.
+**Home screens** counts each installing device once, ever, so that one is close
+to a number of people. The same figures are in the Worker itself:
+
+```bash
+curl https://private-scale-counter.roboroy.workers.dev/stats
+```
+
 ## Sharing the app with others
 
 Under **Settings → Share the app** you will find the app's address with a
