@@ -1096,7 +1096,7 @@ $('icsBtn').addEventListener('click', () => {
 function maakBackup() {
   const entries = listEntries();
   const payload = {
-    app: 'afvalapp',
+    app: 'private-scale',
     version: 1,
     exportedAt: new Date().toISOString(),
     settings: { ...settings, lastReminderDate: null },

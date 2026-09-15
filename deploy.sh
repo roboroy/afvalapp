@@ -23,9 +23,9 @@ fi
 HASH=$(cat index.html manifest.webmanifest css/styles.css js/*.js icons/*.png \
        | shasum -a 256 | cut -c1-10)
 
-sed -i '' -E "s|^const VERSION    = '[^']*';|const VERSION    = 'afvalapp-${HASH}';|" sw.js
+sed -i '' -E "s|^const VERSION    = '[^']*';|const VERSION    = 'private-scale-${HASH}';|" sw.js
 
-if ! grep -q "const VERSION    = 'afvalapp-${HASH}';" sw.js; then
+if ! grep -q "const VERSION    = 'private-scale-${HASH}';" sw.js; then
   echo "Kon de VERSION-regel in sw.js niet bijwerken. Is de regel handmatig aangepast?" >&2
   exit 1
 fi
@@ -75,7 +75,7 @@ if [ -n "$NIEUW" ]; then
   fi
 fi
 
-echo "Versie: afvalapp-${HASH}"
+echo "Versie: private-scale-${HASH}"
 git add -A
 git commit -q -m "$1"
 git push -q
@@ -87,4 +87,4 @@ if [ "$APP_GEWIJZIGD" = ja ]; then
 else
   echo "De app zelf is niet veranderd, dus er komt geen updatemelding."
 fi
-echo "https://roboroy.github.io/afvalapp/"
+echo "https://roboroy.github.io/private-scale/"

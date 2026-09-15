@@ -4,11 +4,11 @@
 
 // Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
 // app-bestanden. Verander deze regel niet met de hand.
-const VERSION    = 'afvalapp-938b157170';
+const VERSION    = 'private-scale-e89722cd3c';
 const ASSETS     = `${VERSION}-assets`;
-const CONFIG     = 'afvalapp-config';
-const CONFIG_URL = '/__afvalapp_config__';
-const TAG        = 'afvalapp-weigh-in';
+const CONFIG     = 'private-scale-config';
+const CONFIG_URL = '/__private_scale_config__';
+const TAG        = 'private-scale-weigh-in';
 
 const PRECACHE = [
   './',

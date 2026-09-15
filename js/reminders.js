@@ -17,7 +17,7 @@
 import { todayISO } from './store.js';
 import { t } from './i18n.js';
 
-const TAG = 'afvalapp-weigh-in';
+const TAG = 'private-scale-weigh-in';
 
 /**
  * navigator.serviceWorker.ready blijft eeuwig hangen wanneer er niets

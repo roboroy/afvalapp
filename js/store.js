@@ -5,6 +5,11 @@
 
 import { language, t } from './i18n.js';
 
+/* Deze drie sleutels houden bewust hun oude naam. Ze staan in localStorage
+   op de telefoon van iedere gebruiker; hernoemen zou betekenen dat je voor
+   altijd een migratiepad in de code moet laten staan, want er kan altijd
+   iemand zijn die de app een jaar niet opende. Permanente complexiteit voor
+   iets wat alleen zichtbaar is in de ontwikkelaarsconsole. */
 const K_ENTRIES    = 'afvalapp.entries.v1';
 const K_SETTINGS   = 'afvalapp.settings.v1';
 const K_MILESTONES = 'afvalapp.milestones.v1';
