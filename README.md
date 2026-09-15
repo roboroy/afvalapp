@@ -37,6 +37,21 @@ noemen zou dan schijnnauwkeurigheid zijn.
 vandaag nog niet op de weegschaal hebt gestaan; de dag is immers nog bezig. Staat
 je herinnering op wekelijks, dan telt de app weken in plaats van dagen.
 
+## Wat de app verstuurt
+
+Vrijwel niets. Je metingen, doelen en mijlpalen blijven in de opslag van je
+browser en gaan nooit ergens heen.
+
+Het enige dat de app verstuurt is een telling: hoogstens één berichtje per dag
+per apparaat, en één bij het installeren. Daarin staat alleen om wat voor
+gebeurtenis het gaat. Aan de andere kant — een Cloudflare Worker, zie
+[`teller/`](teller/) — wordt niets anders bewaard dan een getal dat met één
+omhooggaat. Geen IP-adres, geen user agent, geen identificatie.
+
+Onder **Instellingen → Privacy** staat dit ook in de app zelf, met een
+schakelaar om niet mee te tellen. Zolang er in `js/telemetrie.js` geen
+Worker-adres is ingevuld, verstuurt de app helemaal niets.
+
 ## Voortgang delen
 
 De knop **↗** rechtsboven maakt een afbeelding van je voortgang: je verandering

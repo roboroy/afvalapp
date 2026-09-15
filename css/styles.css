@@ -328,6 +328,17 @@ input[type="date"], input[type="time"] { min-height: 46px; }
 .btn--danger:hover { background: var(--danger-soft); }
 .btnrow { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* ── Privacy-uitleg ────────────────────────────────────────── */
+.privacy { display: flex; flex-direction: column; gap: 7px; }
+.privacy__kop {
+  margin: 0; font-size: .82rem; font-weight: 700;
+  color: var(--text); letter-spacing: -.005em;
+}
+.privacy__tekst {
+  margin: 0; font-size: .82rem; line-height: 1.5; color: var(--text-soft);
+}
+.privacy__tekst em { font-style: normal; font-weight: 650; color: var(--text); }
+
 /* ── Switch ────────────────────────────────────────────────── */
 .switch { display: flex; align-items: center; gap: 12px; cursor: pointer; }
 .switch input { position: absolute; opacity: 0; width: 0; height: 0; }

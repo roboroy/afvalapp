@@ -1,0 +1,8 @@
+name = "afvalapp-teller"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# Vul hieronder de id in die je krijgt bij het aanmaken van de KV-namespace.
+[[kv_namespaces]]
+binding = "TELLER"
+id = "11c47bcdd2ef409988d501bd76879ea7"

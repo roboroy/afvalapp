@@ -22,6 +22,9 @@ export const DEFAULT_SETTINGS = {
   lastBackupAt: null,           // YYYY-MM-DD van de laatste back-up
   lastBackupCount: 0,           // aantal metingen op dat moment
   backupDeferredUntil: null,    // YYYY-MM-DD tot wanneer niet vragen
+  telemetrieUit: false,         // meetellen in het gebruikersaantal
+  telemetrieLaatsteDag: null,   // YYYY-MM-DD van de laatste telling
+  telemetrieInstallatieGemeld: false,
   installDismissed: false,
 };
 

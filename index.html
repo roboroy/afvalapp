@@ -251,6 +251,46 @@
       <button type="button" class="btn btn--danger btn--block" id="wipeBtn">Alle gegevens wissen</button>
     </div>
 
+    <div class="card form">
+      <h3 class="card__title">Privacy</h3>
+
+      <div class="privacy">
+        <h4 class="privacy__kop">Wat op dit apparaat blijft</h4>
+        <p class="privacy__tekst">
+          Je metingen, notities, doelen, lengte en mijlpalen staan in de opslag van deze
+          browser. Ze worden nergens heen gestuurd en niemand anders kan erbij — ook de
+          maker van de app niet. Er is geen account en geen server die ze bewaart.
+        </p>
+      </div>
+
+      <div class="privacy">
+        <h4 class="privacy__kop">Wat de app wél verstuurt</h4>
+        <p class="privacy__tekst">
+          Hoogstens één keer per dag stuurt de app een leeg berichtje naar een teller.
+          Daarin staat niets anders dan om wat voor gebeurtenis het gaat: een opening
+          of een installatie. Aan de andere kant wordt niets anders bewaard dan een
+          getal dat met één omhooggaat.
+        </p>
+        <p class="privacy__tekst">
+          Er gaat geen gewicht mee, geen doel, geen notitie, geen mijlpaal, geen naam en
+          geen kenmerk waarmee je herkend kunt worden. Er staan geen cookies in de app en
+          er zijn geen advertenties of andere diensten.
+        </p>
+        <p class="privacy__tekst">
+          Wat niet weg te nemen is: de server die het berichtje ontvangt ziet op dat
+          moment je IP-adres, net als bij elk bezoek aan een willekeurige website. Er
+          wordt niets mee gedaan en het wordt niet vastgelegd.
+        </p>
+      </div>
+
+      <label class="switch">
+        <input type="checkbox" id="setTelemetrie" checked>
+        <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+        <span class="switch__label">Meetellen in het gebruikersaantal</span>
+      </label>
+      <p id="telemetrieStatus" class="hint"></p>
+    </div>
+
     <p class="version">Afvalapp · werkt offline · <span id="appVersion"></span></p>
   </section>
 

@@ -21,6 +21,10 @@ import {
 } from './share.js';
 
 import {
+  meldOpening, meldInstallatie, tellerIngesteld, haalCijfers,
+} from './telemetrie.js';
+
+import {
   notificationsSupported, permissionState, requestPermission,
   showReminder, applyReminder, isDue, alreadyNudgedToday, buildIcs,
 } from './reminders.js';
@@ -209,6 +213,25 @@ function renderToday() {
   /* hint bij het formulier */
   syncFormHint();
 }
+
+/* ── Meetellen ──────────────────────────────────────────────── */
+
+function renderTelemetrieStatus() {
+  const el = $('telemetrieStatus');
+  if (!tellerIngesteld()) {
+    el.textContent = 'De teller is nog niet ingesteld, dus de app verstuurt op dit moment helemaal niets.';
+    return;
+  }
+  el.textContent = settings.telemetrieUit
+    ? 'Je telt niet mee. De app verstuurt niets.'
+    : 'Alleen een telling, hoogstens één keer per dag.';
+}
+
+$('setTelemetrie').addEventListener('change', (e) => {
+  settings = patchSettings({ telemetrieUit: !e.target.checked });
+  renderTelemetrieStatus();
+  toast(e.target.checked ? 'Je telt weer mee' : 'Je telt niet meer mee');
+});
 
 /* ── Delen ──────────────────────────────────────────────────── */
 
@@ -979,6 +1002,7 @@ function fillSettingsForm() {
   $('setStart').value  = settings.startWeight === null ? '' : fmtKg(settings.startWeight);
   $('setGoal').value   = settings.goalWeight  === null ? '' : fmtKg(settings.goalWeight);
   $('setHeight').value = settings.heightCm    === null ? '' : String(settings.heightCm);
+  $('setTelemetrie').checked = !settings.telemetrieUit;
   $('setReminder').checked = !!settings.reminderEnabled;
   $('setReminderTime').value = settings.reminderTime || '08:00';
   $('setWeekday').value = String(Number.isInteger(settings.reminderWeekday) ? settings.reminderWeekday : 1);
@@ -1029,6 +1053,7 @@ $('installClose').addEventListener('click', () => {
 window.addEventListener('appinstalled', () => {
   $('installBanner').hidden = true;
   refreshReminderState();
+  meldInstallatie();
 });
 
 /* ── Service worker en updates ──────────────────────────────── */
@@ -1188,8 +1213,11 @@ function boot() {
   renderBmi();
   renderAchieved();
   renderBackupLine();
+  renderTelemetrieStatus();
+
   const start = handleLaunchParams();
   nudgeIfDue();
+  meldOpening();
 
   // Niet vragen als je via de snelkoppeling komt om even snel te wegen;
   // dan wil je het invoerveld, geen venster ervoor. Volgende keer wel.
