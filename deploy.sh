@@ -43,6 +43,38 @@ else
   APP_GEWIJZIGD=ja
 fi
 
+# git add -A pakt alles op wat er in de map is verschenen. Dat ging een keer
+# mis: wrangler liet een cachebestand met een account-id en e-mailadres
+# achter, en dat belandde zo in de openbare repo. Daarom eerst laten zien
+# wat er nieuw is.
+NIEUW=$(git ls-files --others --exclude-standard)
+
+if [ -n "$NIEUW" ]; then
+  echo "Deze bestanden staan nog niet in git en gaan nu mee:"
+  echo "$NIEUW" | sed 's/^/  + /'
+
+  VERDACHT=$(echo "$NIEUW" | grep -iE '(^|/)\.(env|wrangler|aws|ssh|npmrc|netrc)(\.|/|$)|credential|secret|token|password|\.pem$|\.key$' || true)
+  if [ -n "$VERDACHT" ]; then
+    echo
+    echo "  ⚠️  Dit ziet eruit als iets dat niet openbaar hoort:"
+    echo "$VERDACHT" | sed 's/^/     /'
+    echo "     Zet het in .gitignore voordat je verdergaat."
+  fi
+  echo
+
+  # Alleen vragen als er iemand achter de terminal zit; draait het script
+  # vanuit een ander programma, dan volstaat de opsomming hierboven.
+  if [ -t 0 ]; then
+    printf "Doorgaan? [j/N] "
+    read -r ANTWOORD
+    case "$ANTWOORD" in
+      j|J|ja|Ja|JA) ;;
+      *) echo "Afgebroken."; exit 1 ;;
+    esac
+    echo
+  fi
+fi
+
 echo "Versie: afvalapp-${HASH}"
 git add -A
 git commit -q -m "$1"
