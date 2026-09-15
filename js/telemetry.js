@@ -1,5 +1,5 @@
 /* ============================================================
-   telemetrie.js — één berichtje per dag, puur om te tellen.
+   telemetry.js — one message a day, purely to count.
 
    Er gaat niets anders de deur uit dan of het om een opening of een
    installatie gaat. Geen gewicht, geen doelen, geen mijlpalen, geen
@@ -14,29 +14,29 @@ import { todayISO, getSettings, patchSettings } from './store.js';
  * Zolang hier de standaardwaarde staat, verstuurt de app niets — handig
  * om lokaal te ontwikkelen zonder de teller te vervuilen.
  */
-const TELLER_URL = 'https://afvalapp-teller.roboroy.workers.dev';
+const COUNTER_URL = 'https://private-scale-counter.roboroy.workers.dev';
 
 /** Draaien we op een ontwikkelmachine in plaats van op de echte site? */
-function lokaleOmgeving() {
+function isLocalhost() {
   const h = location.hostname;
   return h === 'localhost' || h === '127.0.0.1' || h === '' || h.endsWith('.local');
 }
 
-export function tellerIngesteld() {
+export function counterConfigured() {
   // Vanaf localhost telt de app niet mee. De Worker zou het verzoek toch
   // weigeren, en zo vervuil je tijdens het ontwikkelen de cijfers niet én
   // hou je de console schoon.
-  return /^https:\/\//.test(TELLER_URL) && !lokaleOmgeving();
+  return /^https:\/\//.test(COUNTER_URL) && !isLocalhost();
 }
 
-export function tellerAdres() {
-  return tellerIngesteld() ? TELLER_URL : null;
+export function counterAddress() {
+  return counterConfigured() ? COUNTER_URL : null;
 }
 
 async function stuur(soort) {
-  if (!tellerIngesteld()) return false;
+  if (!counterConfigured()) return false;
   try {
-    await fetch(`${TELLER_URL}?e=${soort}`, {
+    await fetch(`${COUNTER_URL}?e=${soort}`, {
       method: 'POST',
       mode: 'cors',
       keepalive: true,
@@ -75,9 +75,9 @@ export async function meldInstallatie() {
 
 /** De openbare, geaggregeerde cijfers ophalen. */
 export async function haalCijfers() {
-  if (!tellerIngesteld()) return null;
+  if (!counterConfigured()) return null;
   try {
-    const res = await fetch(`${TELLER_URL}/stats`, { cache: 'no-store' });
+    const res = await fetch(`${COUNTER_URL}/stats`, { cache: 'no-store' });
     if (!res.ok) return null;
     return await res.json();
   } catch {

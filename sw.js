@@ -4,7 +4,7 @@
 
 // Wordt automatisch gezet door ./deploy.sh op basis van een hash van de
 // app-bestanden. Verander deze regel niet met de hand.
-const VERSION    = 'afvalapp-c84f3b7b99';
+const VERSION    = 'afvalapp-938b157170';
 const ASSETS     = `${VERSION}-assets`;
 const CONFIG     = 'afvalapp-config';
 const CONFIG_URL = '/__afvalapp_config__';
@@ -19,7 +19,7 @@ const PRECACHE = [
   'js/charts.js',
   'js/i18n.js',
   'js/share.js',
-  'js/telemetrie.js',
+  'js/telemetry.js',
   'js/reminders.js',
   'manifest.webmanifest',
   'icons/icon-192.png',

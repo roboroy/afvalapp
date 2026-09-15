@@ -1,0 +1,13 @@
+name = "private-scale-counter"
+main = "worker.js"
+compatibility_date = "2026-01-01"
+
+# D1 rather than KV: KV caches reads for up to a minute, which makes
+# read-add-write lose counts. See worker.js.
+#
+# database_name keeps its original value — that is how the database is
+# registered with Cloudflare. Only database_id actually binds.
+[[d1_databases]]
+binding = "DB"
+database_name = "afvalapp-teller"
+database_id = "70607049-b111-4884-a930-277814ac861a"

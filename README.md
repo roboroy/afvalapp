@@ -1,322 +1,338 @@
-# Afvalapp
+# Private Scale
 
-Een webapp om je gewicht bij te houden. Werkt offline, staat als icoon op je
-beginscherm en heeft geen account, server of database nodig — al je metingen
-staan in de opslag van je eigen browser.
+A web app for tracking your weight. It works offline, sits on your home screen
+as an icon, and needs no account, server or database — every measurement lives
+in your own browser's storage.
 
-- **Vandaag** — gewicht invullen, je trendgewicht, voortgang naar je doel met een
-  prognose wanneer je het haalt, en hoeveel dagen op rij je gemeten hebt
-- **Grafiek** — verloop per **dag**, **week**, **maand** en **jaar**, met een 7-daags gemiddelde en je streefgewicht als stippellijn. Heb je je middel gemeten, dan kun je bovenin wisselen tussen gewicht en middelomtrek
-- **Historie** — alle metingen per maand, aantikken om te wijzigen, kruisje om te
-  verwijderen, en een overzicht van je behaalde mijlpalen
-- **Instellingen** — start- en streefgewicht, lengte (BMI), dagelijkse herinnering, back-up en export
+- **Today** — enter your weight, see your trend weight, your progress towards
+  your goal with a forecast of when you will reach it, and how many days in a
+  row you have measured
+- **Chart** — your trend by **day**, **week**, **month** and **year**, with a
+  7-day average and your goal weight as a dashed line. Once you have measured
+  your waist you can switch between weight and waist at the top
+- **History** — every measurement grouped by month, tap to edit, cross to
+  delete, plus an overview of the milestones you reached
+- **Settings** — language, start and goal weight, height (for your BMI),
+  reminders, backups and export
+
+The interface is available in **English and Dutch**. It follows your phone's
+language unless you pick one yourself under Settings.
 
 ---
 
-## Middelomtrek
+## Waist measurement
 
-Naast je gewicht kun je per meting je middel in centimeters invullen. Dat veld
-is optioneel en mag je overslaan; de meeste mensen wegen dagelijks en meten
-hun middel eens per week.
+Alongside your weight you can record your waist in centimetres. That field is
+optional; most people weigh themselves daily and measure their waist once a
+week.
 
-Zodra je er één invult verschijnt er een kaartje op **Vandaag** met je laatste
-omtrek en het verschil sinds je eerste meting, en krijgt de grafiek bovenin een
-keuze tussen **Gewicht** en **Middel**. Zolang je er geen invult blijft alles
-zoals het was.
+As soon as you fill one in, a card appears on **Today** with your latest
+measurement and the change since your first one, and the chart gains a choice
+between **Weight** and **Waist**. Until then nothing changes.
 
-Waarom dit de moeite waard is: zodra je gaat sporten kan je gewicht stilstaan
-terwijl je wel centimeters verliest. De weegschaal vertelt dan niet het hele
-verhaal.
+Why this is worth having: once you start exercising your weight can stall while
+you still lose centimetres. The scale does not tell the whole story.
 
-**Gewicht blijft verplicht, middel is een extra.** Een meting zonder gewicht
-bestaat niet — het trendgewicht, de prognose en de mijlpalen rekenen daar
-allemaal op. Meet je je middel op een dag dat je niet weegt, vul dan ook even
-je gewicht in.
+**Weight stays required, waist is an extra.** A measurement without a weight
+does not exist — the trend weight, the forecast and the milestones all depend
+on it. If you measure your waist on a day you do not weigh yourself, fill in
+your weight as well.
 
-De omtrek krijgt bewust geen trendlijn, prognose of mijlpalen. Het is een
-tweede maat naast de weegschaal, geen tweede app.
+The waist deliberately gets no trend line, no forecast and no milestones. It is
+a second measure beside the scale, not a second app.
 
-## Het trendgewicht
+## The trend weight
 
-Het grote getal op het beginscherm is niet je laatste meting, maar het
-gemiddelde van de afgelopen zeven dagen. Dat is bewust.
+The large number on the home screen is not your latest measurement but the
+average of the past seven days. That is on purpose.
 
-Je gewicht schommelt van dag tot dag met een kilo of meer door vocht, zout en
-wat er nog in je darmen zit. Dat heeft niets met vet te maken. Stuur je op die
-rauwe cijfers, dan schrik je van een slechte ochtend en word je te blij van een
-goede. Het weekgemiddelde laat zien wat er werkelijk gebeurt. Je meting van
-vandaag staat er gewoon onder.
+Your weight swings a kilo or more from day to day through water, salt and
+whatever is still in your gut. None of that is fat. Steer by those raw numbers
+and you will be alarmed by a bad morning and too pleased by a good one. The
+weekly average shows what is actually happening. Today's measurement is right
+underneath it.
 
-Vanaf drie metingen schakelt de app over op het trendgewicht; daarvoor toont
-hij je laatste meting.
+From three measurements on, the app switches to the trend weight; before that
+it shows your latest measurement.
 
-De **prognose** onder de voortgangsbalk trekt een rechte lijn door je
-trendwaarden van de afgelopen vier weken en rekent uit wanneer je op je doel
-zit. Hij zegt bewust niets zolang je minder dan twee weken of minder dan vijf
-keer gemeten hebt, en ook niet als je gewicht stilstaat of stijgt — een datum
-noemen zou dan schijnnauwkeurigheid zijn.
+The **forecast** under the progress bar draws a straight line through your
+trend values of the past four weeks and works out when you will reach your
+goal. It deliberately says nothing while you have measured for less than two
+weeks or fewer than five times, and nothing either when your weight is flat or
+rising — naming a date then would be false precision.
 
-**Dagen op rij** telt hoe lang je het volhoudt. De reeks breekt niet doordat je
-vandaag nog niet op de weegschaal hebt gestaan; de dag is immers nog bezig. Staat
-je herinnering op wekelijks, dan telt de app weken in plaats van dagen.
+**Days in a row** counts how long you keep it up. The run does not break
+because you have not stepped on the scale yet today; the day is not over. If
+your reminder is set to weekly, the app counts weeks instead of days.
 
-## Wat de app verstuurt
+## What the app sends
 
-Vrijwel niets. Je metingen, doelen en mijlpalen blijven in de opslag van je
-browser en gaan nooit ergens heen.
+Almost nothing. Your measurements, goals and milestones stay in your browser's
+storage and never go anywhere.
 
-Het enige dat de app verstuurt is een telling: hoogstens één berichtje per dag
-per apparaat, en één bij het installeren. Daarin staat alleen om wat voor
-gebeurtenis het gaat. Aan de andere kant — een Cloudflare Worker, zie
-[`teller/`](teller/) — wordt daar de landcode bij afgeleid uit het IP-adres, en
-worden er getallen opgehoogd: per dag, per land. Het IP-adres zelf wordt niet
-opgeslagen, en er gaat geen user agent of identificatie mee.
+The only thing the app sends is a count: at most one message per device per
+day, and one when you install it. It says nothing beyond which kind of event it
+was. On the other end — a Cloudflare Worker, see [`counter/`](counter/) — the
+country code is derived from the IP address and numbers are incremented: per
+day, per country. The IP address itself is not stored, and no user agent or
+identifier is sent.
 
-Onder **Instellingen → Privacy** staat dit ook in de app zelf, met een
-schakelaar om niet mee te tellen. Zolang er in `js/telemetrie.js` geen
-Worker-adres is ingevuld, verstuurt de app helemaal niets.
+Under **Settings → Privacy** this is spelled out in the app itself, with a
+switch to opt out. As long as no Worker address is filled in in
+`js/telemetry.js`, the app sends nothing at all.
 
-## De app met anderen delen
+## Sharing the app with others
 
-Onder **Instellingen → Deel de app** staat het adres van de app met een knop
-**Delen** (die het deelmenu van je telefoon opent) en **Kopieer link**. Heeft je
-apparaat geen deelmenu, dan blijft alleen de kopieerknop over.
+Under **Settings → Share the app** you will find the app's address with a
+**Share** button (which opens your phone's share sheet) and **Copy link**. If
+your device has no share sheet, only the copy button remains.
 
-Je deelt uitsluitend het adres. Wie de link opent begint met een lege app en
-zijn eigen metingen, die net als bij jou op zijn eigen toestel blijven staan.
-Er is niets gezamenlijks: geen account, geen gedeelde lijst, geen inzage in
-elkaars gegevens.
+You share nothing but the address. Whoever opens the link starts with an empty
+app and their own measurements, which stay on their own device just like yours.
+There is nothing shared: no account, no common list, no view of each other's
+data.
 
-Het adres wordt afgeleid van de pagina waar je op dat moment staat, dus het
-klopt ook als je de app ooit ergens anders neerzet.
+The address is derived from the page you are on, so it stays correct if you
+ever move the app somewhere else.
 
-## Voortgang delen
+## Sharing your progress
 
-De knop **↗** rechtsboven maakt een afbeelding van je voortgang: je verandering
-in kilo's, de lijn van je trendgewicht, je voortgangsbalk en je weegritme. Die
-gaat via het deelmenu van je telefoon naar WhatsApp, Signal, mail of wat je
-verder hebt.
+The **↗** button in the top right makes an image of your progress: your change
+in kilos, the line of your trend weight, your progress bar and your weigh-in
+run. It goes through your phone's share sheet to WhatsApp, Signal, mail or
+whatever else you have.
 
-**Standaard staan er geen kilo's op.** Je deelt dat er 4,8 kg af is en dat je
-op 48% van je doel zit — niet wat je weegt, niet wat je streefgewicht is, en de
-grafiek heeft dan een as zonder cijfers. Wil je het wel meesturen, dan zet je
-het vinkje **Mijn gewicht in kilo's meesturen** aan. Dat vinkje staat elke keer
-opnieuw uit; per bericht beslis je zelf.
+**By default no kilos appear on it.** You share that 4.8 kg came off and that
+you are 48% of the way — not what you weigh, not what your goal is, and the
+chart has an axis without numbers. If you do want to include it, tick **Include
+my weight in kilos**. That tick is off again every time; you decide per
+message.
 
-Je hebt minstens drie metingen nodig, want daarvoor is er geen trend om te
-laten zien. Heeft je apparaat geen deelmenu, bijvoorbeeld op een laptop, dan
-wordt de afbeelding gedownload zodat je 'm zelf kunt doorsturen.
+You need at least three measurements, because before that there is no trend to
+show. If your device has no share sheet, the image is downloaded so you can
+pass it on yourself.
 
-## Aanvullen wat ontbreekt
+## Filling in what is missing
 
-Zonder streefgewicht kan de app geen voortgang en geen prognose berekenen,
-en zonder je lengte geen BMI en geen BMI-mijlpalen. Ontbreekt een van beide,
-dan vraagt de app er bij het openen om in een venster waarin je het meteen
-invult.
+Without a goal weight the app cannot work out progress or a forecast, and
+without your height no BMI and no BMI milestones. If either is missing, the app
+asks for it in a dialog when you open it, where you can fill it in right away.
 
-Je kunt het wegklikken met **Later**; dan komt het de volgende dag terug
-zolang het onvolledig blijft. Kom je binnen via de snelkoppeling *Wegen*, dan
-blijft het venster weg — je wilde immers snel iets invullen. Bij een gewone
-opening verschijnt het alsnog.
+You can dismiss it with **Later**; it comes back the next day as long as
+something is missing. If you arrive through the *Weigh in* shortcut the dialog
+stays away — you wanted to enter something quickly. It appears on the next
+normal opening.
 
-Je startgewicht hoef je niet zelf te zetten: de app neemt daarvoor je eerste
-meting, tenzij je het onder Instellingen aanpast.
+You do not need to set your starting weight yourself: the app takes your first
+measurement, unless you change it under Settings.
 
-## Mijlpalen
+## Milestones
 
-De app viert drie soorten momenten, en doet dat in het scherm zelf — niet met
-een systeemmelding. Je passeert een mijlpaal namelijk alleen op het moment dat
-je een gewicht invoert, en dan kijk je er toch al naar. Dit onderdeel werkt
-daardoor altijd, ook zonder toestemming voor meldingen.
+The app celebrates three kinds of moment, and it does so on screen rather than
+with a system notification. You only pass a milestone at the moment you enter a
+weight, and you are looking at the app anyway. That means this part always
+works, even without permission for notifications.
 
-| Soort | Wanneer |
+| Kind | When |
 |---|---|
-| Onderweg naar je doel | op 25%, 50%, 75% en 100% van de afstand tussen je start- en streefgewicht |
-| BMI-grens | als je BMI onder de 30 komt, en als hij onder de 25 komt |
-| Volhouden | 7, 30 en 100 dagen op rij — of 4, 12 en 26 weken als je herinnering wekelijks staat |
+| Towards your goal | at 25%, 50%, 75% and 100% of the distance between your start and goal weight |
+| BMI threshold | when your BMI drops below 30, and when it drops below 25 |
+| Keeping it up | 7, 30 and 100 days in a row — or 4, 12 and 26 weeks if your reminder is weekly |
 
-Drie regels bepalen wanneer er iets afgaat:
+Three rules decide when something fires:
 
-- **Er wordt gerekend met je trendgewicht,** niet met je rauwe meting. Anders
-  vier je feest omdat je toevallig een droge ochtend had en sta je de dag erna
-  weer boven de grens.
-- **Eenmaal behaald blijft behaald.** Zak je later terug, dan pakt de app een
-  mijlpaal niet af en viert hem ook niet nog een keer.
-- **Een BMI-mijlpaal telt alleen als je de grens ook echt passeert.** Wie al
-  onder de 25 begon, krijgt daar geen mijlpaal voor.
+- **It works off your trend weight,** not your raw measurement. Otherwise you
+  celebrate because you happened to have a dry morning and are back above the
+  line the next day.
+- **Once reached, always reached.** If you go back up later, the app does not
+  take a milestone away and does not celebrate it a second time.
+- **A BMI milestone only counts if you actually cross the line.** Someone who
+  started below 25 does not get one.
 
-Bij de eerste start na deze versie loopt de app je bestaande historie één keer
-na en legt mijlpalen vast op de dag waarop je ze werkelijk haalde — zonder ze
-te vieren, want je hebt ze niet vandaag bereikt. Je vindt ze terug onder
-**Historie → Behaalde mijlpalen**.
+On the first start after this version the app walks through your existing
+history once and records milestones on the day you actually reached them —
+without celebrating, because you did not reach them today. You find them under
+**History → Milestones reached**.
 
 ---
 
-## 1. Op je telefoon zetten
+## 1. Putting it on your phone
 
-Voor herinneringen en offline gebruik moet de app via **https** geserveerd
-worden. Hieronder de snelste gratis manier.
+For reminders and offline use the app has to be served over **https**. Here is
+the quickest free way.
 
-### GitHub Pages (aanbevolen)
+### GitHub Pages (recommended)
 
-1. Maak een account op [github.com](https://github.com) als je die nog niet hebt.
-2. Maak een nieuwe repository, bijvoorbeeld `afvalapp`. Zet 'm op **Private**
-   als je wilt — Pages werkt ook voor privérepo's op een betaald plan; op het
-   gratis plan moet de repo **Public** zijn. De app zelf verstuurt niets, dus
-   je metingen blijven hoe dan ook privé: die staan alleen op je telefoon.
-3. Upload de inhoud van deze map (`index.html`, `sw.js`, `manifest.webmanifest`
-   en de mappen `css/`, `js/`, `icons/`). Sleep ze in de browser naar
-   *Add file → Upload files*, of gebruik git:
+1. Create an account at [github.com](https://github.com) if you do not have one.
+2. Create a new repository, for example `private-scale`. You can make it
+   **Private** — Pages works for private repos on a paid plan; on the free plan
+   the repo has to be **Public**. The app itself sends nothing, so your
+   measurements stay private either way: they only exist on your phone.
+3. Upload the contents of this folder (`index.html`, `sw.js`,
+   `manifest.webmanifest` and the `css/`, `js/`, `icons/` folders). Drag them
+   into *Add file → Upload files*, or use git:
 
    ```bash
-   git init && git add . && git commit -m "Afvalapp" && git branch -M main && git remote add origin https://github.com/JOUWNAAM/afvalapp.git && git push -u origin main
+   git init && git add . && git commit -m "Private Scale" && git branch -M main && git remote add origin https://github.com/YOURNAME/private-scale.git && git push -u origin main
    ```
 
-4. Ga in de repo naar **Settings → Pages**, kies bij *Source* de branch `main`
-   en map `/ (root)`, en klik op **Save**.
-5. Na een minuut staat de app op `https://JOUWNAAM.github.io/afvalapp/`.
-   Open die link op je telefoon.
+4. In the repo go to **Settings → Pages**, pick branch `main` and folder
+   `/ (root)` under *Source*, and click **Save**.
+5. After a minute the app is at `https://YOURNAME.github.io/private-scale/`.
+   Open that link on your phone.
 
-### Alternatief zonder GitHub
+### Without GitHub
 
-[Netlify Drop](https://app.netlify.com/drop): sleep deze map in het vak op die
-pagina. Je krijgt direct een https-adres. Let op dat je het adres bewaart —
-zonder account is het lastig terug te vinden.
+[Netlify Drop](https://app.netlify.com/drop): drag this folder onto that page.
+You get an https address straight away. Keep the address somewhere — without an
+account it is hard to find back.
 
-### Snel je gewicht invullen
+### Entering your weight quickly
 
-Houd het app-icoon op je beginscherm ingedrukt. Er verschijnt een menu met
-**Wegen** en **Grafiek**. Tik je op *Wegen*, dan opent de app direct op het
-invoerveld met de datum op vandaag — je hoeft niet eerst te navigeren.
+Press and hold the app icon on your home screen. A menu appears with **Weigh
+in** and **Chart**. Tapping *Weigh in* opens the app directly on the input
+field with today's date — no navigating first.
 
-Hetzelfde gebeurt als je op een herinneringsmelding tikt: die brengt je
-rechtstreeks naar het invoerveld.
+The same happens when you tap a reminder notification: it takes you straight to
+the input field.
 
-Het toetsenbord springt niet vanzelf open. Android staat dat alleen toe na een
-aanraking, en die is er bij het openen van een snelkoppeling nog niet geweest.
-Het veld staat wel geselecteerd en in beeld, dus één tik en je typt.
+The keyboard does not open by itself. Android only allows that after a touch,
+and opening a shortcut is not one. The field is selected and in view, so one
+tap and you are typing.
 
-### Installeren op je beginscherm (Android)
+### Installing on your home screen (Android)
 
-Open de link in Chrome. Er verschijnt onderin een balkje **Installeren**; tik
-daarop. Zie je die niet, gebruik dan het menu ⋮ → **App installeren** of
-**Toevoegen aan startscherm**.
+Open the link in Chrome. A bar appears at the bottom saying **Install**; tap it.
+If you do not see it, use the ⋮ menu → **Install app** or **Add to Home screen**.
 
-**Dit is niet optioneel als je herinneringen wilt.** Android laat een webapp
-alleen op de achtergrond wekken wanneer die geïnstalleerd is.
+**This is not optional if you want reminders.** Android only lets a web app be
+woken in the background once it is installed.
 
----
+### On an iPhone
 
-## 2. Herinneringen — wat werkt en wat niet
+Safari does not offer an install button, so the app shows instructions instead:
+tap **Share** and choose *Add to Home Screen*. Do this — without it iOS cannot
+show notifications at all, and Safari clears storage of sites you have not used
+for a week (home-screen apps are exempt, according to Apple).
 
-Een webapp mag zelf niets inplannen op je telefoon. De app gebruikt daarom
-drie lagen:
+## 2. Reminders — what works and what does not
 
-| Laag | Wanneer | Betrouwbaarheid |
+A web app is not allowed to schedule anything on your phone by itself. The app
+therefore uses three layers:
+
+| Layer | When | Reliability |
 |---|---|---|
-| Periodic Background Sync | App geïnstalleerd, Android wekt de app af en toe | Goed, maar Android bepaalt zelf het exacte moment — de melding kan wat later komen |
-| Timer in de app | Zolang de app openstaat | Prima, maar alleen bij een open app |
-| Inhaalcheck | Elke keer dat je de app opent | Altijd — je ziet dan alsnog dat je nog niet gewogen hebt |
+| Periodic Background Sync | App installed, Android wakes it now and then | Good, but Android decides the exact moment — the notification can arrive a little late |
+| Timer inside the app | While the app is open | Fine, but only with the app open |
+| Catch-up check | Every time you open the app | Always — you will see that you have not weighed in yet |
 
-Wil je een melding op een gegarandeerd tijdstip, gebruik dan de knop
-**Agenda-afspraak** bij Instellingen. Die maakt een `.ics`-bestand met een
-dagelijks terugkerende afspraak plus alarm. Open het bestand op je telefoon en
-je agenda-app zet 'm erin. Dat loopt via het besturingssysteem en is daarmee
-de zekerste optie.
+On an **iPhone** the first two fall away. Periodic Background Sync does not
+exist there, so you only get the reminder when you open the app.
 
-Bij **Instellingen → Herinnering** kies je hoe vaak: **elke dag** of **1× per
-week**. Kies je voor wekelijks, dan verschijnt er een keuze voor de dag. Het
-tijdstip geldt in beide gevallen. De agenda-export volgt dezelfde instelling:
-een dagelijkse afspraak, of een wekelijkse op de gekozen dag.
+If you want a notification at a guaranteed time, use the **Calendar event**
+button under Settings. It creates an `.ics` file with a repeating appointment
+plus an alarm. Open the file on your phone and your calendar app adds it. That
+runs through the operating system and is the surest option — and on an iPhone
+it is effectively the only one.
 
-Zet meldingen aan via de schakelaar bij **Instellingen → Herinnering**. Chrome
-vraagt dan eenmalig toestemming. Heb je die per ongeluk geweigerd, dan zet je
-het terug via het slotje/instellingen-icoon links van de adresbalk →
-*Meldingen*.
+Turn notifications on with the switch under **Settings → Reminder**. Chrome
+asks for permission once. If you refused by accident, you can restore it
+through the lock/settings icon to the left of the address bar → *Notifications*.
 
----
+## 3. Your data
 
-## 3. Je gegevens
+Everything lives in the `localStorage` of the browser you open the app in.
+That means:
 
-Alles staat in `localStorage` van de browser waarin je de app opent. Dat
-betekent:
+- Nobody else can reach it, not even me — there is no server.
+- The data is **per device and per browser**. What you enter on your phone does
+  not show up on your laptop.
+- If you clear Chrome's site data, your measurements are gone.
 
-- Niemand anders kan erbij, ook ik niet — er is geen server.
-- De gegevens zijn **per apparaat en per browser**. Op je laptop zie je niet
-  wat je op je telefoon hebt ingevuld.
-- Als je de sitegegevens van Chrome wist, verdwijnen je metingen.
+Backups and the CSV export include your waist measurement; older backups
+without that field still load fine.
 
-Back-ups en de CSV-export bevatten je middelomtrek gewoon mee; oudere back-ups
-zonder dat veld laden nog steeds prima.
+Make a backup now and then: **Settings → Make a backup** gives you a JSON file
+you can load again with **Restore a backup**. Underneath those buttons you see
+when you last did it and how many measurements have been added since.
 
-Maak af en toe een back-up: **Instellingen → Back-up maken** geeft een
-JSON-bestand dat je met **Back-up terugzetten** weer kunt inladen. Onder die
-knoppen staat wanneer je dat voor het laatst deed en hoeveel metingen er
-sindsdien bij zijn gekomen.
+The app asks for one itself once it falls behind: at 20 measurements if you
+never made a backup, after that whenever 25 measurements have been added, and
+otherwise when it has been more than four months and something new exists. If
+nothing has been added it stays quiet — there is nothing to lose. **Later**
+gives you two weeks of peace.
 
-De app vraagt er zelf om zodra het achterloopt: bij 20 metingen als je nog
-nooit een back-up maakte, daarna telkens als er 25 metingen bij zijn gekomen,
-en verder als het meer dan vier maanden geleden is en er iets nieuws is. Is er
-niets bij gekomen, dan zwijgt hij — er valt dan immers niets te verliezen. Met
-**Later** heb je twee weken rust.
+The app cannot see whether the file was actually saved; pressing the button
+counts as a backup made. Also: editing an old measurement does not change the
+count, so such a change only shows up in the next round.
 
-De app kan niet zien of het bestand ook echt bewaard is; op de knop drukken
-telt als een gemaakte back-up. Ook geldt: een oude meting aanpassen verandert
-het aantal niet, dus zo'n wijziging valt pas op bij de volgende ronde. Bij
-**Historie → CSV** krijg je een bestand met puntkomma's, dat direct opent in
-Excel of Numbers.
+Under **History → CSV** you get a semicolon-separated file that opens directly
+in Excel or Numbers.
 
----
+## 4. Running it locally to change something
 
-## 4. Lokaal draaien om iets aan te passen
-
-Dubbelklikken op `index.html` werkt niet: de app gebruikt JavaScript-modules
-en een service worker, en die vereisen `http://` of `https://`. Start een
-lokale server:
+Double-clicking `index.html` does not work: the app uses JavaScript modules and
+a service worker, and those need `http://` or `https://`. Start a local server:
 
 ```bash
 python3 -m http.server 8931
 ```
 
-Open daarna `http://localhost:8931`. Op `localhost` gelden dezelfde rechten
-als op https, dus ook de service worker en meldingen werken daar.
+Then open `http://localhost:8931`. On `localhost` the same rights apply as on
+https, so the service worker and notifications work there too. The usage
+counter deliberately stays quiet on localhost, so you do not pollute the
+figures while developing.
 
-### Bestanden
+### Files
 
 ```
-index.html              schermopbouw
-manifest.webmanifest    naam, iconen en kleuren voor het beginscherm
-sw.js                   offline cache + achtergrondherinnering
-css/styles.css          vormgeving, licht en donker thema
-js/store.js             opslag, datumhulp, aggregatie per dag/week/maand/jaar
-js/charts.js            de SVG-grafiek (geen externe libraries)
-js/share.js             tekent de deelbare afbeelding op een canvas
-js/reminders.js         meldingen, planning en de .ics-export
-js/app.js               navigatie en alle schermen aan elkaar
-icons/                  app-iconen
+index.html              screen layout
+manifest.webmanifest    name, icons and colours for the home screen
+sw.js                   offline cache + background reminder
+css/styles.css          styling, light and dark theme
+js/i18n.js              translations, language choice and plurals
+js/store.js             storage, date helpers, aggregation by day/week/month/year
+js/charts.js            the SVG chart (no external libraries)
+js/share.js             draws the shareable image on a canvas
+js/reminders.js         notifications, scheduling and the .ics export
+js/telemetry.js         the daily count, and nothing else
+js/app.js               navigation and all screens tied together
+icons/                  app icons
+counter/                the Cloudflare Worker behind the usage count
 ```
 
-## 5. Een wijziging live zetten
+### Adding a language
+
+Everything visible sits in `js/i18n.js` as a key with a value per language.
+Add a language code to `SUPPORTED`, add a block with the same keys, and
+`missingKeys('xx')` tells you what you still owe. Dates and numbers follow
+automatically through `Intl`.
+
+## 5. Publishing a change
 
 ```bash
-./deploy.sh "wat je veranderd hebt"
+./deploy.sh "what you changed"
 ```
 
-Dat script berekent een hash over alle app-bestanden, schrijft die als
-`VERSION` in `sw.js`, en committeert en pusht. Je hoeft dus nooit zelf een
-versienummer bij te houden — verander die regel ook niet met de hand, want
-dan overschrijft het script 'm toch.
+That script computes a hash over all app files, writes it into `sw.js` as
+`VERSION`, then commits and pushes. You never have to keep a version number
+yourself — and do not edit that line by hand, because the script overwrites it.
 
-Na ongeveer een minuut staat de nieuwe versie op GitHub Pages. Open je dan de
-app, dan verschijnt onderin **"Er staat een nieuwe versie klaar"** met een knop
-*Vernieuwen*. Pas als je daarop tikt neemt de nieuwe versie het over en
-herlaadt de app in één keer.
+It also lists any files that are not in git yet before committing, and flags
+names that look like credentials. That check exists because a Cloudflare cache
+file with an account id and email address once slipped into the public repo
+through `git add -A`.
 
-Dat wachten is expres. De service worker roept bij het installeren bewust
-geen `skipWaiting()` aan: zou hij meteen overnemen, dan kun je nieuwe HTML
-krijgen terwijl de JavaScript nog uit de oude cache komt. Door te wachten tot
-jij op *Vernieuwen* tikt, wisselt alles tegelijk.
+After about a minute the new version is on GitHub Pages. Open the app and a bar
+appears at the bottom: **A new version is ready**, with a **Refresh** button.
+Only when you tap it does the new version take over and the app reload in one
+go.
 
-**Je metingen blijven bij een update staan.** De service worker beheert alleen
-de cache met app-bestanden; je gegevens staan in `localStorage` en worden
-daarbij niet aangeraakt. Alleen de knop *Alle gegevens wissen* verwijdert ze.
+That wait is deliberate. The service worker purposely does not call
+`skipWaiting()` on install: if it took over immediately you could end up with
+new HTML while the JavaScript still came from the old cache. By waiting for you
+to tap *Refresh*, everything switches at once.
+
+**Your measurements survive an update.** The service worker only manages the
+cache of app files; your data lives in `localStorage` and is not touched. Only
+the *Erase all data* button removes it.

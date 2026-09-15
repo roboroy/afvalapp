@@ -27,8 +27,8 @@ import {
 } from './share.js';
 
 import {
-  meldOpening, meldInstallatie, tellerIngesteld, haalCijfers,
-} from './telemetrie.js';
+  meldOpening, meldInstallatie, counterConfigured, haalCijfers,
+} from './telemetry.js';
 
 import {
   notificationsSupported, permissionState, requestPermission,
@@ -383,7 +383,7 @@ function renderAppLink() {
 
 function renderTelemetrieStatus() {
   const el = $('telemetrieStatus');
-  if (!tellerIngesteld()) {
+  if (!counterConfigured()) {
     el.textContent = t('counter.notSet');
     return;
   }
