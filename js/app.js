@@ -1471,7 +1471,7 @@ function showUpdateBanner(worker) {
 
   $('updateBtn').onclick = () => {
     $('updateBtn').disabled = true;
-    $('updateBtn').textContent = 'Bezig…';
+    $('updateBtn').textContent = t('update.busy');
     // De wachtende service worker mag het nu overnemen; zodra dat lukt
     // vuurt 'controllerchange' en herlaadt de pagina in één keer.
     worker.postMessage({ type: 'skip-waiting' });

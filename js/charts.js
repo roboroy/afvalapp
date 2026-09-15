@@ -128,7 +128,7 @@ export function renderChart(host, { points, mode, goal = null, avgMap = null, ee
     const gy = yToPx(goal);
     svg.append(svgEl('line', { class: 'c-goal', x1: PAD.left, y1: gy, x2: VB_W - PAD.right, y2: gy }));
     const gt = svgEl('text', { class: 'c-goal-t', x: VB_W - PAD.right, y: gy - 4, 'text-anchor': 'end' });
-    gt.textContent = 'doel';
+    gt.textContent = t('chart.goalLine');
     svg.append(gt);
   }
 
