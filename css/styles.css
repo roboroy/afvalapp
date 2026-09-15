@@ -143,6 +143,18 @@ body {
 .iconbtn:active { transform: scale(.94); }
 .iconbtn--sm { width: 30px; height: 30px; font-size: .8rem; }
 
+.appbar__acties { display: flex; align-items: center; gap: 8px; }
+
+/* ── Delen ─────────────────────────────────────────────────── */
+.share__preview {
+  border-radius: 12px; overflow: hidden;
+  background: var(--bg-sunken); border: 1px solid var(--border);
+  line-height: 0;
+}
+.share__preview canvas { width: 100%; height: auto; display: block; }
+.share__preview[hidden] { display: none; }
+.switch--compact .switch__label { font-size: .88rem; font-weight: 500; }
+
 /* ── Layout ────────────────────────────────────────────────── */
 #main { max-width: 620px; margin: 0 auto; }
 .view { padding: 16px 16px 28px; display: flex; flex-direction: column; gap: var(--gap); }

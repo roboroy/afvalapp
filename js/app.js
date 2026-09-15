@@ -17,6 +17,10 @@ import {
 import { renderChart } from './charts.js';
 
 import {
+  kanDelen, tekenKaart, deelTekst, canvasNaarBestand, kanBestandDelen,
+} from './share.js';
+
+import {
   notificationsSupported, permissionState, requestPermission,
   showReminder, applyReminder, isDue, alreadyNudgedToday, buildIcs,
 } from './reminders.js';
@@ -205,6 +209,76 @@ function renderToday() {
   /* hint bij het formulier */
   syncFormHint();
 }
+
+/* ── Delen ──────────────────────────────────────────────────── */
+
+let deelCanvas = null;
+
+function tekenDeelVoorbeeld() {
+  const entries = listEntries();
+  const host = $('sharePreview');
+  const leeg = $('shareLeeg');
+  const status = kanDelen(entries);
+
+  if (!status.kan) {
+    host.replaceChildren();
+    host.hidden = true;
+    leeg.hidden = false;
+    leeg.textContent = status.reden;
+    $('shareGo').disabled = true;
+    deelCanvas = null;
+    return;
+  }
+
+  deelCanvas = tekenKaart(entries, settings, { includeWeights: $('shareWeights').checked });
+  host.replaceChildren(deelCanvas);
+  host.hidden = false;
+  leeg.hidden = true;
+  $('shareGo').disabled = false;
+}
+
+$('shareBtn').addEventListener('click', () => {
+  $('shareWeights').checked = false;      // elke keer opnieuw de veilige stand
+  tekenDeelVoorbeeld();
+  $('shareDialog').showModal();
+});
+
+$('shareWeights').addEventListener('change', tekenDeelVoorbeeld);
+$('shareClose').addEventListener('click', () => $('shareDialog').close());
+
+$('shareGo').addEventListener('click', async () => {
+  if (!deelCanvas) return;
+  const knop = $('shareGo');
+  knop.disabled = true;
+
+  try {
+    const metGewicht = $('shareWeights').checked;
+    const bestand = await canvasNaarBestand(deelCanvas, `afvalapp-voortgang-${todayISO()}.png`);
+    const tekst = deelTekst(listEntries(), settings, { includeWeights: metGewicht });
+
+    if (kanBestandDelen(bestand)) {
+      await navigator.share({ files: [bestand], text: tekst });
+      $('shareDialog').close();
+    } else {
+      // Geen deelmenu (bijvoorbeeld op een laptop): dan maar downloaden.
+      const url = URL.createObjectURL(bestand);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = bestand.name;
+      document.body.append(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      $('shareDialog').close();
+      toast('Afbeelding gedownload — je vindt hem bij je downloads');
+    }
+  } catch (err) {
+    // Het deelmenu wegtikken gooit AbortError; dat is geen fout.
+    if (err && err.name !== 'AbortError') toast('Delen lukte niet op dit apparaat.');
+  } finally {
+    knop.disabled = false;
+  }
+});
 
 /* ── Aanvulvenster ──────────────────────────────────────────── */
 

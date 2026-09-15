@@ -37,6 +37,23 @@ noemen zou dan schijnnauwkeurigheid zijn.
 vandaag nog niet op de weegschaal hebt gestaan; de dag is immers nog bezig. Staat
 je herinnering op wekelijks, dan telt de app weken in plaats van dagen.
 
+## Voortgang delen
+
+De knop **↗** rechtsboven maakt een afbeelding van je voortgang: je verandering
+in kilo's, de lijn van je trendgewicht, je voortgangsbalk en je weegritme. Die
+gaat via het deelmenu van je telefoon naar WhatsApp, Signal, mail of wat je
+verder hebt.
+
+**Standaard staan er geen kilo's op.** Je deelt dat er 4,8 kg af is en dat je
+op 48% van je doel zit — niet wat je weegt, niet wat je streefgewicht is, en de
+grafiek heeft dan een as zonder cijfers. Wil je het wel meesturen, dan zet je
+het vinkje **Mijn gewicht in kilo's meesturen** aan. Dat vinkje staat elke keer
+opnieuw uit; per bericht beslis je zelf.
+
+Je hebt minstens drie metingen nodig, want daarvoor is er geen trend om te
+laten zien. Heeft je apparaat geen deelmenu, bijvoorbeeld op een laptop, dan
+wordt de afbeelding gedownload zodat je 'm zelf kunt doorsturen.
+
 ## Aanvullen wat ontbreekt
 
 Zonder streefgewicht kan de app geen voortgang en geen prognose berekenen,
@@ -217,6 +234,7 @@ sw.js                   offline cache + achtergrondherinnering
 css/styles.css          vormgeving, licht en donker thema
 js/store.js             opslag, datumhulp, aggregatie per dag/week/maand/jaar
 js/charts.js            de SVG-grafiek (geen externe libraries)
+js/share.js             tekent de deelbare afbeelding op een canvas
 js/reminders.js         meldingen, planning en de .ics-export
 js/app.js               navigatie en alle schermen aan elkaar
 icons/                  app-iconen

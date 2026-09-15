@@ -20,9 +20,14 @@
 
 <header class="appbar">
   <h1 class="appbar__title">Afvalapp</h1>
-  <button id="themeToggle" class="iconbtn" type="button" aria-label="Thema wisselen" title="Thema wisselen">
-    <span class="iconbtn__glyph" aria-hidden="true">◐</span>
-  </button>
+  <div class="appbar__acties">
+    <button id="shareBtn" class="iconbtn" type="button" aria-label="Voortgang delen" title="Voortgang delen">
+      <span class="iconbtn__glyph" aria-hidden="true">↗</span>
+    </button>
+    <button id="themeToggle" class="iconbtn" type="button" aria-label="Thema wisselen" title="Thema wisselen">
+      <span class="iconbtn__glyph" aria-hidden="true">◐</span>
+    </button>
+  </div>
 </header>
 
 <main id="main">
@@ -280,6 +285,27 @@
       <button type="submit" class="btn btn--primary">Opslaan</button>
     </div>
   </form>
+</dialog>
+
+<dialog id="shareDialog" class="modal" aria-labelledby="shareTitle">
+  <div class="modal__form">
+    <h2 class="modal__title" id="shareTitle">Voortgang delen</h2>
+
+    <div id="sharePreview" class="share__preview"></div>
+    <p id="shareLeeg" class="hint" hidden></p>
+
+    <label class="switch switch--compact">
+      <input type="checkbox" id="shareWeights">
+      <span class="switch__track" aria-hidden="true"><span class="switch__thumb"></span></span>
+      <span class="switch__label">Mijn gewicht in kilo&#39;s meesturen</span>
+    </label>
+    <p class="hint hint--tight">Zonder vinkje ziet niemand wat je weegt &mdash; alleen hoeveel eraf is.</p>
+
+    <div class="modal__buttons">
+      <button type="button" class="btn btn--ghost" id="shareClose">Sluiten</button>
+      <button type="button" class="btn btn--primary" id="shareGo">Delen</button>
+    </div>
+  </div>
 </dialog>
 
 <div id="toast" class="toast" role="status" aria-live="polite"></div>
