@@ -6,6 +6,10 @@
 .tmp.drivedownload/
 *.tmp
 
+# Wrangler laat hier een lokale cache achter met je Cloudflare account-id
+# en e-mailadres. Die hoort niet in een openbare repo.
+.wrangler/
+
 # Editors
 .vscode/
 .idea/
