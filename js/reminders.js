@@ -18,6 +18,19 @@ import { todayISO } from './store.js';
 
 const TAG = 'afvalapp-weigh-in';
 
+/**
+ * navigator.serviceWorker.ready blijft eeuwig hangen wanneer er niets
+ * geregistreerd is — het is geen belofte die afgewezen wordt. Daarom een
+ * harde grens, zodat een mislukte registratie nooit een scherm laat wachten.
+ */
+function swReady(ms = 1200) {
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise((_, afwijzen) =>
+      setTimeout(() => afwijzen(new Error('geen service worker beschikbaar')), ms)),
+  ]);
+}
+
 export function notificationsSupported() {
   return typeof Notification !== 'undefined' && 'serviceWorker' in navigator;
 }
@@ -42,7 +55,7 @@ export async function requestPermission() {
 export async function showReminder(body = 'Tijd om je gewicht in te vullen.') {
   if (permissionState() !== 'granted') return false;
   try {
-    const reg = await navigator.serviceWorker.ready;
+    const reg = await swReady();
     await reg.showNotification('Afvalapp', {
       body,
       tag: TAG,
@@ -66,9 +79,9 @@ export async function showReminder(body = 'Tijd om je gewicht in te vullen.') {
 
 /* ── Configuratie naar de service worker ────────────────────── */
 
-async function pushConfigToSW(settings) {
+async function pushConfigToSW(settings, reg) {
+  if (!reg) return;
   try {
-    const reg = await navigator.serviceWorker.ready;
     reg.active?.postMessage({
       type: 'config',
       reminderEnabled: !!settings.reminderEnabled,
@@ -82,9 +95,9 @@ async function pushConfigToSW(settings) {
 
 /* ── Periodic Background Sync ───────────────────────────────── */
 
-async function registerPeriodicSync(enabled) {
+async function registerPeriodicSync(enabled, reg) {
+  if (!reg) return 'unsupported';
   try {
-    const reg = await navigator.serviceWorker.ready;
     if (!('periodicSync' in reg)) return 'unsupported';
 
     if (!enabled) {
@@ -156,8 +169,15 @@ function scheduleInPage(settings, onFire) {
  * @returns {Promise<{permission:string, background:string}>}
  */
 export async function applyReminder(settings, onFire) {
-  await pushConfigToSW(settings);
-  const background = await registerPeriodicSync(!!settings.reminderEnabled);
+  // Eén keer wachten op de service worker en die registratie hergebruiken;
+  // anders liep de wachttijd bij een ontbrekende worker dubbel op.
+  let reg = null;
+  try {
+    reg = await swReady();
+  } catch { /* geen worker: de timer en de inhaalcheck doen hun werk */ }
+
+  await pushConfigToSW(settings, reg);
+  const background = await registerPeriodicSync(!!settings.reminderEnabled, reg);
   scheduleInPage(settings, onFire);
   return { permission: permissionState(), background };
 }

@@ -76,6 +76,31 @@ function setDeltaClass(el, delta) {
   else if (r > 0) el.classList.add('is-up');
 }
 
+/* ── Platform ───────────────────────────────────────────────── */
+
+/**
+ * Draait dit op een iPhone of iPad? Alleen gebruikt om eerlijke teksten te
+ * tonen — de app werkt verder overal hetzelfde.
+ */
+function opIOS() {
+  const ua = navigator.userAgent || '';
+  if (/iPad|iPhone|iPod/.test(ua)) return true;
+
+  // iPadOS 13 en later doet zich voor als een Mac; alleen de aanraakpunten
+  // verraden het nog. Die truc mag alleen in Safari gelden — een Chrome die
+  // een telefoon nabootst op een Mac heeft dezelfde kenmerken en is het niet.
+  const isSafari = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(ua);
+  return isSafari &&
+         navigator.platform === 'MacIntel' &&
+         navigator.maxTouchPoints > 1;
+}
+
+/** Staat de app op het beginscherm in plaats van in een browsertabblad? */
+function staatOpBeginscherm() {
+  return window.matchMedia('(display-mode: standalone)').matches ||
+         navigator.standalone === true;   // de iOS-variant
+}
+
 /* ── Thema ──────────────────────────────────────────────────── */
 
 const THEME_ORDER = ['system', 'light', 'dark'];
@@ -734,12 +759,22 @@ async function refreshReminderState() {
   $('reminderOptions').hidden = !settings.reminderEnabled;
   $('reminderWeekdayField').hidden = settings.reminderFrequency !== 'weekly';
 
-  if (!notificationsSupported()) {
-    status.textContent = 'Meldingen worden niet ondersteund in deze browser. De agenda-afspraak werkt wel.';
-    return;
-  }
   if (!settings.reminderEnabled) {
     status.textContent = 'Herinnering staat uit.';
+    return;
+  }
+
+  // Op een iPhone kan een webapp in een gewoon Safari-tabblad helemaal geen
+  // meldingen tonen. Dat eerst zeggen, anders klopt de rest niet.
+  if (opIOS() && !staatOpBeginscherm()) {
+    status.textContent = `Ingesteld op ${reminderPhrase()}. Zet de app eerst op je ` +
+      'beginscherm via de Deel-knop — in Safari zelf kan iOS geen meldingen tonen. ' +
+      'Daarna zie je de herinnering in elk geval zodra je de app opent.';
+    return;
+  }
+
+  if (!notificationsSupported()) {
+    status.textContent = 'Meldingen worden niet ondersteund in deze browser. De agenda-afspraak werkt wel.';
     return;
   }
 
@@ -757,8 +792,16 @@ async function refreshReminderState() {
   const lastEntryDate = entries.length ? entries[entries.length - 1].date : null;
   const { background } = await applyReminder({ ...settings, lastEntryDate }, onReminderFires);
 
-  const standalone = window.matchMedia('(display-mode: standalone)').matches;
+  const standalone = staatOpBeginscherm();
   const wanneer = reminderPhrase();
+
+  // iOS kent Periodic Background Sync niet; daar valt niets te wekken.
+  if (opIOS()) {
+    status.textContent = `Ingesteld op ${wanneer}. Een webapp kan op een iPhone niet ` +
+      'op de achtergrond gewekt worden, dus je krijgt de melding zodra je de app opent. ' +
+      'Wil je zeker weten dat hij op tijd afgaat, gebruik dan de agenda-afspraak hierboven.';
+    return;
+  }
 
   if (background === 'on') {
     status.textContent = `Je krijgt ${wanneer} een melding, ook als de app dicht is.`;
@@ -1036,6 +1079,21 @@ window.addEventListener('beforeinstallprompt', (e) => {
   if (!settings.installDismissed) $('installBanner').hidden = false;
 });
 
+/**
+ * Safari kent 'beforeinstallprompt' niet, dus op een iPhone verschijnt die
+ * banner nooit. Daar tonen we uitleg in plaats van een knop — installeren kan
+ * alleen de gebruiker zelf, via het deelmenu van iOS.
+ */
+function toonIOSInstallatieUitleg() {
+  if (!opIOS() || staatOpBeginscherm() || settings.installDismissed) return;
+
+  $('installText').textContent =
+    'Zet Afvalapp op je beginscherm: tik op Deel en kies “Zet op beginscherm”. ' +
+    'Pas dan kan de app je herinneren.';
+  $('installBtn').hidden = true;      // er valt hier niets te klikken
+  $('installBanner').hidden = false;
+}
+
 $('installBtn').addEventListener('click', async () => {
   $('installBanner').hidden = true;
   if (!deferredInstall) return;
@@ -1215,9 +1273,15 @@ function boot() {
   renderBackupLine();
   renderTelemetrieStatus();
 
+  // Niet wachten op de service worker: mislukt die registratie, dan bleef
+  // deze regel anders leeg. Zodra de worker er wel is wordt hij nogmaals
+  // bijgewerkt, want pas dan is bekend of achtergrondmeldingen mogen.
+  refreshReminderState();
+
   const start = handleLaunchParams();
   nudgeIfDue();
   meldOpening();
+  toonIOSInstallatieUitleg();
 
   // Niet vragen als je via de snelkoppeling komt om even snel te wegen;
   // dan wil je het invoerveld, geen venster ervoor. Volgende keer wel.
