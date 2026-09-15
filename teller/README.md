@@ -5,13 +5,14 @@ weet hoeveel mensen de Afvalapp gebruiken zonder iets over hen te bewaren.
 
 ## Wat er opgeslagen wordt
 
-Vier soorten sleutels in KV, met uitsluitend een getal erin:
+Eén tabel in een D1-database (SQLite), met twee kolommen en alleen getallen:
 
 ```
-totaal:openingen              1423
-totaal:installaties             37
-dag:2026-09-15:openingen        12
-dag:2026-09-15:installaties      1
+sleutel                       aantal
+totaal:openingen                1423
+totaal:installaties               37
+dag:2026-09-15:openingen          12
+dag:2026-09-15:installaties        1
 ```
 
 Geen IP-adres, geen user agent, geen identificatie, geen gegevens uit de app.
@@ -22,65 +23,54 @@ IP-adres op het moment van het verzoek. De Worker doet daar niets mee en legt
 het nergens vast, maar het passeert wel. Dat staat ook zo in de app zelf
 onder Instellingen → Privacy.
 
-## Opzetten — via de browser (geen installatie nodig)
+## Waarom D1 en niet KV
 
-Cloudflare heeft een code-editor in het dashboard. Je hebt geen Node, npm of
-wrangler nodig.
+De eerste versie gebruikte KV met lezen-optellen-schrijven. Dat werkt niet:
+KV cachet leesacties tot ongeveer een minuut, dus twee tellingen binnen
+datzelfde minuutje lezen allebei dezelfde oude waarde en schrijven allebei
+dat getal plus één. De tweede telling is dan weg.
 
-1. Maak een gratis account op [dash.cloudflare.com](https://dash.cloudflare.com).
+Gemeten op de live teller: vijf leesacties achter elkaar gaven
+`1, 1, 2, 1, 1`. Dat is geen zeldzame samenloop maar het normale gedrag.
 
-2. **Maak de Worker.** Ga in het linkermenu naar *Workers & Pages* en maak een
-   nieuwe Worker aan. Noem hem `afvalapp-teller` en publiceer de
-   voorbeeldcode die Cloudflare aanbiedt. De eerste keer vraagt Cloudflare je
-   om een subdomein te kiezen; dat wordt onderdeel van je adres.
+D1 hoogt op met één opdracht — `INSERT ... ON CONFLICT DO UPDATE SET
+aantal = aantal + 1` — en kan daardoor niets kwijtraken.
 
-3. **Plak de code.** Open de Worker en kies *Edit code* (of *Quick edit*).
-   Gooi alles weg wat er staat, plak de inhoud van `worker.js` uit deze map,
-   en publiceer.
+## Opzetten
 
-4. **Maak de opslag.** Zoek in het linkermenu naar *KV* — die staat onder
-   *Storage & Databases*, of onder *Workers & Pages*. Maak daar een namespace
-   aan en noem die `afvalapp-teller`.
-
-5. **Koppel de opslag aan de Worker.** Ga terug naar de Worker, naar
-   *Settings*, en zoek het onderdeel voor bindings of variabelen. Voeg een
-   KV-binding toe met als variabelenaam exact `TELLER`, en kies de namespace
-   uit stap 4. Publiceer opnieuw.
-
-   > Die naam moet letterlijk `TELLER` zijn — de code zoekt `env.TELLER`.
-
-6. Op de pagina van je Worker staat het adres, in de vorm
-   `https://afvalapp-teller.roboroy.workers.dev`.
-
-7. Zet dat adres in `js/telemetrie.js` bij `TELLER_URL`. Zolang daar de
-   standaardwaarde staat, verstuurt de app niets.
-
-Cloudflare verandert de indeling van zijn dashboard regelmatig, dus de
-menunamen kunnen iets afwijken. Je zoekt in alle gevallen twee dingen: een
-plek om de code te plakken, en een plek om een KV-binding met de naam `TELLER`
-toe te voegen.
-
-## Opzetten — via de opdrachtregel
-
-Liever met tooling? Dan heb je eerst Node nodig, want dat staat niet
-standaard op macOS:
+Je hebt Node en wrangler nodig. Staat Node er nog niet:
 
 ```bash
-brew install node
+brew install node && npm install -g wrangler && wrangler login
 ```
 
-Daarna:
+1. **Maak de database.**
 
-```bash
-npm install -g wrangler && wrangler login
-wrangler kv namespace create TELLER
-```
+   ```bash
+   wrangler d1 create afvalapp-teller
+   ```
 
-Zet de `id` die je terugkrijgt in `wrangler.toml`, en publiceer:
+   Je krijgt een `database_id` terug. Zet die in `wrangler.toml` op de plek
+   van `VUL_HIER_JE_D1_DATABASE_ID_IN`.
 
-```bash
-cd teller && wrangler deploy
-```
+2. **Maak de tabel.**
+
+   ```bash
+   wrangler d1 execute afvalapp-teller --remote --file=schema.sql
+   ```
+
+3. **Publiceer.**
+
+   ```bash
+   wrangler deploy
+   ```
+
+4. Het adres staat in de uitvoer, in de vorm
+   `https://afvalapp-teller.roboroy.workers.dev`. Dat adres staat al
+   ingevuld in `js/telemetrie.js`.
+
+De oude KV-namespace `afvalapp-teller` wordt niet meer gebruikt en kun je
+opruimen in het Cloudflare-dashboard onder *Storage & Databases → KV*.
 
 ## Cijfers bekijken
 
@@ -88,8 +78,17 @@ cd teller && wrangler deploy
 curl https://afvalapp-teller.roboroy.workers.dev/stats
 ```
 
-Of via het Cloudflare-dashboard onder **Workers & Pages → KV**, waar je ook
-de dagsleutels ziet staan.
+Of alles ineens, inclusief de dagcijfers:
+
+```bash
+wrangler d1 execute afvalapp-teller --remote --command "SELECT * FROM tellingen ORDER BY sleutel"
+```
+
+Terugzetten naar nul:
+
+```bash
+wrangler d1 execute afvalapp-teller --remote --command "DELETE FROM tellingen"
+```
 
 ## Gratis grenzen
 
@@ -108,10 +107,3 @@ Strenger maken zou betekenen dat je per IP moet gaan bijhouden wie hoe vaak
 telt — precies wat we hier níét willen. Het is dus een indicatie van gebruik,
 geen gecontroleerd cijfer. Voor de vraag "gebruiken er eigenlijk mensen mijn
 app" is dat ruim voldoende.
-
-## Wil je het waterdicht?
-
-`hoogOp()` doet lezen-optellen-schrijven. Vallen twee verzoeken exact samen,
-dan kan één ophoging verloren gaan. Bij dit aantal gebruikers gebeurt dat
-niet. Wil je toch exacte tellingen, stap dan over op D1 met een atomaire
-`UPDATE ... SET n = n + 1`.

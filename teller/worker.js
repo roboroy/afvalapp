@@ -6,11 +6,18 @@
  * geen enkel gegeven uit de app opgeslagen. Ook niet gehasht — er is
  * simpelweg geen veld om het in te zetten.
  *
- * Wat er in de KV-opslag komt te staan, en verder niets:
- *   totaal:openingen          → 1423
- *   totaal:installaties       → 37
- *   dag:2026-09-15:openingen  → 12
- *   dag:2026-09-15:installaties → 1
+ * De opslag is D1 (SQLite) en niet KV, omdat KV leesacties tot een minuut
+ * cachet. Met lezen-optellen-schrijven bovenop zo'n cache verdwijnen
+ * tellingen: twee openingen binnen dezelfde minuut lezen allebei dezelfde
+ * oude waarde en schrijven allebei datzelfde getal plus één. D1 hoogt in
+ * één opdracht op en kan dat niet misgaan.
+ *
+ * De tabel bevat niets anders dan dit:
+ *   sleutel                      aantal
+ *   totaal:openingen             1423
+ *   totaal:installaties            37
+ *   dag:2026-09-15:openingen       12
+ *   dag:2026-09-15:installaties     1
  */
 
 const TOEGESTANE_HERKOMST = 'https://roboroy.github.io';
@@ -30,15 +37,6 @@ function vandaagUTC() {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function hoogOp(kv, sleutel) {
-  // Lezen-optellen-schrijven kan in theorie botsen als twee verzoeken
-  // exact samenvallen. Bij dit aantal gebruikers gebeurt dat niet, en een
-  // gemiste ophoging is hier geen ramp. Wil je het waterdicht, stap dan
-  // over op D1 met een atomaire UPDATE.
-  const huidig = Number(await kv.get(sleutel)) || 0;
-  await kv.put(sleutel, String(huidig + 1));
-}
-
 export default {
   async fetch(request, env) {
     const herkomst = request.headers.get('Origin');
@@ -49,17 +47,13 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
-    // Openbaar en geaggregeerd: handig om zelf even te kijken.
     if (request.method === 'GET' && url.pathname === '/stats') {
-      const [openingen, installaties] = await Promise.all([
-        env.TELLER.get('totaal:openingen'),
-        env.TELLER.get('totaal:installaties'),
-      ]);
+      const { results } = await env.DB
+        .prepare("SELECT sleutel, aantal FROM tellingen WHERE sleutel LIKE 'totaal:%'")
+        .all();
+      const vind = (naam) => results.find((r) => r.sleutel === `totaal:${naam}`)?.aantal ?? 0;
       return new Response(
-        JSON.stringify({
-          openingen: Number(openingen) || 0,
-          installaties: Number(installaties) || 0,
-        }),
+        JSON.stringify({ openingen: vind('openingen'), installaties: vind('installaties') }),
         { headers: { ...cors, 'Content-Type': 'application/json' } },
       );
     }
@@ -76,10 +70,15 @@ export default {
       return new Response('Onbekend type', { status: 400, headers: cors });
     }
 
+    // Eén atomaire opdracht per sleutel: ophogen kan niet misgaan.
     const naam = soort === 'open' ? 'openingen' : 'installaties';
-    await Promise.all([
-      hoogOp(env.TELLER, `totaal:${naam}`),
-      hoogOp(env.TELLER, `dag:${vandaagUTC()}:${naam}`),
+    const ophogen = env.DB.prepare(
+      `INSERT INTO tellingen (sleutel, aantal) VALUES (?, 1)
+       ON CONFLICT(sleutel) DO UPDATE SET aantal = aantal + 1`,
+    );
+    await env.DB.batch([
+      ophogen.bind(`totaal:${naam}`),
+      ophogen.bind(`dag:${vandaagUTC()}:${naam}`),
     ]);
 
     return new Response(null, { status: 204, headers: cors });
