@@ -8,10 +8,11 @@
 
 import {
   movingAverage, trendWeight, hasTrend, currentStreak,
-  fmtKg, fmtDelta, fmtDateLong, fromISO, addDays,
+  fmtNum, fmtDateLong, fromISO, addDays,
+  fmtWeight, fmtWeightDelta, toDisplayWeight,
 } from './store.js';
 
-import { t } from './i18n.js';
+import { t, unitWeight } from './i18n.js';
 
 const W = 1080;
 const H = 1080;
@@ -50,7 +51,8 @@ function lijnPunten(entries) {
   const vanaf = addDays(eind, -179);
   const sel = entries.filter((e) => e.date >= vanaf);
   const avg = movingAverage(entries, 7);
-  return sel.map((e) => ({ date: e.date, v: avg.get(e.date) ?? e.kg }));
+  // Vanaf hier rekent de kaart in de eenheid van de gebruiker.
+  return sel.map((e) => ({ date: e.date, v: toDisplayWeight(avg.get(e.date) ?? e.kg) }));
 }
 
 function tekenGrafiek(ctx, punten, vak, toonAsLabels) {
@@ -95,7 +97,7 @@ function tekenGrafiek(ctx, punten, vak, toonAsLabels) {
     ctx.textBaseline = 'middle';
     for (let i = 0; i <= 3; i++) {
       const waarde = max - ((max - min) * i) / 3;
-      ctx.fillText(fmtKg(waarde, 0), px0 - 16, y + (h * i) / 3);
+      ctx.fillText(fmtNum(waarde, 0), px0 - 16, y + (h * i) / 3);
     }
     ctx.textBaseline = 'alphabetic';
   }
@@ -192,7 +194,7 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
   const daalt = verschil < 0;
   ctx.fillStyle = daalt ? KLEUR.accent : KLEUR.rood;
   ctx.font = f(700, 150);
-  ctx.fillText(`${fmtDelta(verschil)} kg`, W / 2, 320);
+  ctx.fillText(`${fmtWeightDelta(verschil)} ${unitWeight()}`, W / 2, 320);
 
   ctx.fillStyle = KLEUR.zacht;
   ctx.font = f(450, 34);
@@ -223,9 +225,9 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
     if (includeWeights) {
       ctx.textAlign = 'left';
       ctx.fillStyle = KLEUR.vaag;
-      ctx.fillText(`${fmtKg(start)} kg`, PAD, y);
+      ctx.fillText(`${fmtWeight(start)} ${unitWeight()}`, PAD, y);
       ctx.textAlign = 'right';
-      ctx.fillText(t('card.goal', { kg: fmtKg(doel) }), W - PAD, y);
+      ctx.fillText(t('card.goal', { kg: fmtWeight(doel) }), W - PAD, y);
       ctx.textAlign = 'center';
       ctx.fillStyle = KLEUR.tekst;
       ctx.fillText(`${Math.round(pct)}%`, W / 2, y);
@@ -239,7 +241,7 @@ export function tekenKaart(entries, settings, { includeWeights = false } = {}) {
     ctx.textAlign = 'center';
     ctx.fillStyle = KLEUR.zacht;
     ctx.font = f(650, 32);
-    ctx.fillText(t('card.now', { kg: fmtKg(nu) }), W / 2, y);
+    ctx.fillText(t('card.now', { kg: fmtWeight(nu) }), W / 2, y);
     y += 62;
   }
 
@@ -269,14 +271,14 @@ export function deelTekst(entries, settings, { includeWeights = false } = {}) {
   const verschil = nu - start;
   const doel = settings.goalWeight;
 
-  const delen = [`${fmtDelta(verschil)} kg ${t('card.since', { date: fmtDateLong(entries[0].date) })}`];
+  const delen = [`${fmtWeightDelta(verschil)} ${unitWeight()} ${t('card.since', { date: fmtDateLong(entries[0].date) })}`];
 
   if (doel !== null && doel !== undefined && start > doel) {
     const pct = Math.max(0, Math.min(100, ((start - nu) / (start - doel)) * 100));
     delen.push(t('card.pctOfGoal', { pct: Math.round(pct) }));
   }
   if (includeWeights) {
-    delen.push(t('card.now', { kg: fmtKg(nu) }));
+    delen.push(t('card.now', { kg: fmtWeight(nu) }));
   }
   return delen.join(' · ');
 }

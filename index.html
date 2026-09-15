@@ -56,7 +56,7 @@
     <div class="hero card">
       <div class="hero__label" id="heroLabel">Current weight</div>
       <div class="hero__value">
-        <span id="heroWeight">—</span><span class="hero__unit">kg</span>
+        <span id="heroWeight">—</span><span class="hero__unit" id="heroUnit">kg</span>
       </div>
       <div id="heroDelta" class="hero__delta"></div>
       <div id="heroNote" class="hero__note"></div>
@@ -85,7 +85,7 @@
         <span id="waistDate" class="waist__datum"></span>
       </div>
       <div class="waist__rechts">
-        <span class="waist__value"><span id="waistNow">—</span> cm</span>
+        <span class="waist__value"><span id="waistNow">—</span> <span id="waistUnit">cm</span></span>
         <span id="waistDelta" class="waist__delta"></span>
       </div>
     </div>
@@ -101,16 +101,16 @@
       <div class="field">
         <span class="field__label" data-i18n="form.weight">Gewicht (kg)</span>
         <div class="stepper">
-          <button type="button" class="stepper__btn" data-step="-0.1" data-i18n-aria-label="a11y.stepDown">−</button>
+          <button type="button" class="stepper__btn" data-step="-0.1">−</button>
           <input type="text" id="entryWeight" class="stepper__input" inputmode="decimal"
-                 placeholder="0,0" required>
-          <button type="button" class="stepper__btn" data-step="0.1" data-i18n-aria-label="a11y.stepUp">+</button>
+                 required>
+          <button type="button" class="stepper__btn" data-step="0.1">+</button>
         </div>
       </div>
 
       <label class="field">
         <span class="field__label"><span data-i18n="form.waist">Middel in cm</span> <span class="field__opt" data-i18n="form.optional">(optioneel)</span></span>
-        <input type="text" id="entryWaist" class="input" inputmode="decimal" data-i18n-placeholder="form.waistPlaceholder">
+        <input type="text" id="entryWaist" class="input" inputmode="decimal">
       </label>
 
       <label class="field">
@@ -213,18 +213,28 @@
     </div>
 
     <div class="card form">
+      <h3 class="card__title" data-i18n="settings.units">Eenheden</h3>
+      <div class="segmented" id="unitSegmented" role="group" data-i18n-aria-label="a11y.units">
+        <button class="segmented__btn is-active" type="button" data-units="system"   aria-pressed="true"  data-i18n="settings.units.system">Systeem</button>
+        <button class="segmented__btn"           type="button" data-units="metric"   aria-pressed="false" data-i18n="settings.units.metric">Metrisch</button>
+        <button class="segmented__btn"           type="button" data-units="imperial" aria-pressed="false" data-i18n="settings.units.imperial">Imperiaal</button>
+      </div>
+      <p class="hint" data-i18n="settings.units.hint">Metrisch is kilo's en centimeters, imperiaal is ponden en inches.</p>
+    </div>
+
+    <div class="card form">
       <h3 class="card__title" data-i18n="settings.goals">Doelen</h3>
       <label class="field">
         <span class="field__label" data-i18n="settings.startWeight">Startgewicht (kg)</span>
-        <input type="text" id="setStart" class="input" inputmode="decimal" data-i18n-placeholder="settings.startPlaceholder">
+        <input type="text" id="setStart" class="input" inputmode="decimal">
       </label>
       <label class="field">
         <span class="field__label" data-i18n="settings.goalWeight">Streefgewicht (kg)</span>
-        <input type="text" id="setGoal" class="input" inputmode="decimal" data-i18n-placeholder="settings.goalPlaceholder">
+        <input type="text" id="setGoal" class="input" inputmode="decimal">
       </label>
       <label class="field">
         <span class="field__label"><span data-i18n="settings.height">Lengte (cm)</span> <span class="field__opt" data-i18n="settings.heightHint">— voor je BMI</span></span>
-        <input type="number" id="setHeight" class="input" inputmode="numeric" step="1" min="100" max="250" data-i18n-placeholder="settings.heightPlaceholder">
+        <input type="text" id="setHeight" class="input" inputmode="numeric">
       </label>
       <p id="bmiOut" class="hint"></p>
     </div>
@@ -348,12 +358,12 @@
 
     <label class="field" id="setupGoalField">
       <span class="field__label" data-i18n="settings.goalWeight">Streefgewicht (kg)</span>
-      <input type="text" id="setupGoal" class="input" inputmode="decimal" data-i18n-placeholder="settings.goalPlaceholder">
+      <input type="text" id="setupGoal" class="input" inputmode="decimal">
     </label>
 
     <label class="field" id="setupHeightField">
       <span class="field__label" data-i18n="settings.height">Lengte (cm)</span>
-      <input type="number" id="setupHeight" class="input" inputmode="numeric" step="1" min="100" max="250" data-i18n-placeholder="settings.heightPlaceholder">
+      <input type="text" id="setupHeight" class="input" inputmode="numeric">
     </label>
 
     <p id="setupError" class="hint hint--error"></p>

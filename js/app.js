@@ -7,7 +7,10 @@ import {
   listEntries, getEntry, saveEntry, deleteEntry, replaceAllEntries, wipeAll,
   getSettings, patchSettings,
   todayISO, addDays, fromISO, monthLong, weekdayLong,
-  fmtKg, fmtDelta, fmtDateLong, fmtDateShort,
+  fmtNum, fmtDelta, fmtDateLong, fmtDateShort,
+  fmtWeight, fmtLength, fmtWeightDelta, fmtLengthDelta,
+  toStoredWeight, toStoredLength, toDisplayWeight, toDisplayLength,
+  rangeFor, fmtHeight, heightBound, parseHeightInput, LIMITS,
   changeOver, movingAverage, buildSeries, bmi, bmiLabel,
   trendWeight, trendAgo, hasTrend, forecast, currentStreak, waistSamenvatting,
   resetFormatCache,
@@ -18,6 +21,7 @@ import {
 
 import {
   t, setLanguage, language, onLanguageChange, missingKeys,
+  setUnits, units, onUnitsChange, unitWeight, unitLength,
 } from './i18n.js';
 
 import { renderChart } from './charts.js';
@@ -103,7 +107,8 @@ function applyStaticTranslations(root = document) {
   }
 
   // Het invoerveld toont de decimaalscheiding van de taal: 0,0 of 0.0
-  $('entryWeight').placeholder = fmtKg(0);
+  $('entryWeight').placeholder = fmtNum(0);
+  vulEenheden();
 
   // Teksten die niet in één sleutel passen omdat er iets in ingevuld moet.
   document.title = t('app.title');
@@ -113,6 +118,47 @@ function applyStaticTranslations(root = document) {
   $('versionLine').textContent = t('version.line', { app: t('app.name'), version: APP_VERSION });
   $('updateText').textContent = t('update.ready', { app: t('app.name') });
   vulWeekdagen();
+}
+
+/* Voorbeelden voor de lege velden. Per stelsel apart, want een omgerekend
+   voorbeeld levert "e.g. 209.4" op — een getal dat niemand als voorbeeld
+   zou kiezen. Alleen de lengte komt uit één waarde: 180 cm is precies 5'11".*/
+const VOORBEELD = {
+  metric:   { start: 95,  goal: 80,  waist: 94.5 },
+  imperial: { start: 210, goal: 175, waist: 37 },
+};
+const VOORBEELD_LENGTE_CM = 180;
+
+/**
+ * De eenheden op het scherm: labels naast de grote getallen en voorbeelden
+ * in de lege velden. Staat los van applyStaticTranslations omdat een wissel
+ * van eenheid niets aan de taal verandert.
+ */
+function vulEenheden() {
+  $('heroUnit').textContent = unitWeight();
+  $('waistUnit').textContent = unitLength();
+
+  const eg = (n) => t('eg.value', { n: fmtNum(n) });
+  const voorbeeld = VOORBEELD[units()] || VOORBEELD.metric;
+  $('entryWaist').placeholder = eg(voorbeeld.waist);
+  $('setStart').placeholder   = eg(voorbeeld.start);
+  $('setGoal').placeholder    = eg(voorbeeld.goal);
+  $('setupGoal').placeholder  = eg(voorbeeld.goal);
+
+  // De stap van de plus- en minknop hangt af van de eenheid, dus het
+  // voorleesetiket ook. Vandaar hier en niet via een data-attribuut.
+  const stap = fmtNum(units() === 'imperial' ? 0.2 : 0.1);
+  for (const knop of document.querySelectorAll('.stepper__btn')) {
+    knop.setAttribute('aria-label', t(
+      Number(knop.dataset.step) < 0 ? 'a11y.stepDown' : 'a11y.stepUp', { step: stap }));
+  }
+
+  for (const id of ['setHeight', 'setupHeight']) {
+    const veld = $(id);
+    veld.placeholder = t('eg.value', { n: fmtHeight(VOORBEELD_LENGTE_CM) });
+    // Een voet-en-inchnotatie valt niet in te tikken op een cijfertoetsenbord.
+    veld.inputMode = units() === 'imperial' ? 'text' : 'numeric';
+  }
 }
 
 /** De weekdagen komen uit Intl, dus ze volgen vanzelf de gekozen taal. */
@@ -149,10 +195,38 @@ for (const btn of langButtons) {
   });
 }
 
-// Eén plek die alles opnieuw opbouwt na een taalwissel.
-onLanguageChange(() => {
+const unitButtons = document.querySelectorAll('#unitSegmented .segmented__btn');
+
+function syncUnitButtons() {
+  for (const b of unitButtons) {
+    const actief = b.dataset.units === (settings.units || 'system');
+    b.classList.toggle('is-active', actief);
+    b.setAttribute('aria-pressed', String(actief));
+  }
+}
+
+for (const btn of unitButtons) {
+  btn.addEventListener('click', () => {
+    if (btn.dataset.units === settings.units) return;
+    settings = patchSettings({ units: btn.dataset.units });
+    syncUnitButtons();
+    setUnits(settings.units);
+  });
+}
+
+/** Eén plek die alles opnieuw opbouwt na een wissel van taal of eenheid. */
+function herteken() {
   resetFormatCache();          // datums en getallen opnieuw laten opmaken
   applyStaticTranslations();
+  fillSettingsForm();
+
+  // De cijfers in het invoerformulier staan in de oude eenheid; opnieuw uit
+  // de opslag lezen zet ze goed. De notitie is niets waard in de opslag,
+  // dus die houden we los vast.
+  const notitie = $('entryNote').value;
+  loadDateIntoForm($('entryDate').value || todayISO());
+  $('entryNote').value = notitie;
+
   renderToday();
   renderBmi();
   renderAchieved();
@@ -162,7 +236,10 @@ onLanguageChange(() => {
   refreshReminderState();
   if (!$('view-chart').hidden) renderChartView();
   if (!$('view-history').hidden) renderHistory();
-});
+}
+
+onLanguageChange(herteken);
+onUnitsChange(herteken);
 
 /* ── Platform ───────────────────────────────────────────────── */
 
@@ -239,25 +316,25 @@ function renderToday() {
   const trend = toonTrend ? trendWeight(entries) : null;
 
   $('heroLabel').textContent = t(toonTrend ? 'today.trendWeight' : 'today.currentWeight');
-  $('heroWeight').textContent = toonTrend ? fmtKg(trend) : (last ? fmtKg(last.kg) : '—');
+  $('heroWeight').textContent = toonTrend ? fmtWeight(trend) : (last ? fmtWeight(last.kg) : '—');
 
   if (toonTrend) {
     // Trend versus trend van een week terug: dat filtert de dagruis eruit.
     const eerder = trendAgo(entries, 7);
     if (eerder !== null) {
       const d = trend - eerder;
-      deltaEl.textContent = t('today.deltaDays', { delta: fmtDelta(d) });
+      deltaEl.textContent = t('today.deltaDays', { delta: fmtWeightDelta(d) });
       setDeltaClass(deltaEl, d);
     } else {
       deltaEl.textContent = '';
       setDeltaClass(deltaEl, null);
     }
     $('heroNote').textContent = t('today.trendNote');
-    $('heroDate').textContent = t('today.measured', { date: fmtDateShort(last.date), kg: fmtKg(last.kg) });
+    $('heroDate').textContent = t('today.measured', { date: fmtDateShort(last.date), kg: fmtWeight(last.kg) });
   } else if (entries.length >= 2) {
     const prev = entries[entries.length - 2];
     const d = last.kg - prev.kg;
-    deltaEl.textContent = t('today.deltaSince', { delta: fmtDelta(d), date: fmtDateShort(prev.date) });
+    deltaEl.textContent = t('today.deltaSince', { delta: fmtWeightDelta(d), date: fmtDateShort(prev.date) });
     setDeltaClass(deltaEl, d);
     $('heroNote').textContent = t('today.trendSoon');
     $('heroDate').textContent = t('today.lastMeasured', { date: fmtDateLong(last.date) });
@@ -282,13 +359,13 @@ function renderToday() {
     const pct = total === 0 ? 100 : Math.max(0, Math.min(100, (done / total) * 100));
     $('goalFill').style.width = `${pct}%`;
     $('goalBar').setAttribute('aria-valuenow', Math.round(pct));
-    $('goalStart').textContent = `${fmtKg(start)} kg`;
-    $('goalTarget').textContent = `${fmtKg(goal)} kg`;
+    $('goalStart').textContent = `${fmtWeight(start)} ${unitWeight()}`;
+    $('goalTarget').textContent = `${fmtWeight(goal)} ${unitWeight()}`;
     $('goalPct').textContent = `${Math.round(pct)}%`;
     const left = peil - goal;
     $('goalRemaining').textContent = left <= 0
       ? t('goal.reached')
-      : t('goal.remaining', { kg: fmtKg(left) });
+      : t('goal.remaining', { kg: fmtWeight(left) });
 
     renderForecast(entries, goal);
   } else {
@@ -299,17 +376,17 @@ function renderToday() {
   const week  = changeOver(entries, 7);
   const month = changeOver(entries, 30);
   const wEl = $('statWeek');
-  wEl.textContent = week ? `${fmtDelta(week.delta)} kg` : '—';
+  wEl.textContent = week ? `${fmtWeightDelta(week.delta)} ${unitWeight()}` : '—';
   setDeltaClass(wEl, week?.delta ?? null);
 
   const mEl = $('statMonth');
-  mEl.textContent = month ? `${fmtDelta(month.delta)} kg` : '—';
+  mEl.textContent = month ? `${fmtWeightDelta(month.delta)} ${unitWeight()}` : '—';
   setDeltaClass(mEl, month?.delta ?? null);
 
   const tEl = $('statTotal');
   if (last && start !== null) {
     const d = last.kg - start;
-    tEl.textContent = `${fmtDelta(d)} kg`;
+    tEl.textContent = `${fmtWeightDelta(d)} ${unitWeight()}`;
     setDeltaClass(tEl, d);
   } else {
     tEl.textContent = '—';
@@ -508,19 +585,20 @@ $('setupForm').addEventListener('submit', (e) => {
   const patch = {};
 
   if (mist.goal) {
-    const kg = parseNum($('setupGoal').value);
-    if (kg === null || kg < 20 || kg > 400) {
-      fout.textContent = t('toast.setupGoal');
+    const grens = rangeFor('weight');
+    const n = parseNum($('setupGoal').value);
+    if (n === null || n < grens.min || n > grens.max) {
+      fout.textContent = t('toast.setupGoal', grens);
       $('setupGoal').focus();
       return;
     }
-    patch.goalWeight = kg;
+    patch.goalWeight = toStoredWeight(n);
   }
 
   if (mist.lengte) {
-    const cm = parseNum($('setupHeight').value);
-    if (cm === null || cm < 100 || cm > 250) {
-      fout.textContent = t('toast.setupHeight');
+    const cm = parseHeightInput($('setupHeight').value);
+    if (cm === null || cm < LIMITS.height.min || cm > LIMITS.height.max) {
+      fout.textContent = lengteMelding();
       $('setupHeight').focus();
       return;
     }
@@ -606,7 +684,7 @@ function renderWaist(entries) {
   if (!w.heeft) { kaart.hidden = true; return; }
 
   kaart.hidden = false;
-  $('waistNow').textContent = fmtKg(w.laatste);
+  $('waistNow').textContent = fmtLength(w.laatste);
   $('waistDate').textContent = t('waist.measuredOn', { date: fmtDateShort(w.datum) });
 
   const deltaEl = $('waistDelta');
@@ -614,7 +692,7 @@ function renderWaist(entries) {
     deltaEl.textContent = '';
     setDeltaClass(deltaEl, null);
   } else {
-    deltaEl.textContent = t('waist.since', { delta: fmtDelta(w.verschil), date: fmtDateShort(w.vanaf) });
+    deltaEl.textContent = t('waist.since', { delta: fmtLengthDelta(w.verschil), date: fmtDateShort(w.vanaf) });
     setDeltaClass(deltaEl, w.verschil);
   }
 }
@@ -623,7 +701,7 @@ function renderWaist(entries) {
 function renderForecast(entries, goal) {
   const el = $('goalForecast');
   const f = forecast(entries, goal);
-  const tempo = f.rate === null ? null : fmtDelta(f.rate);
+  const tempo = f.rate === null ? null : fmtWeightDelta(f.rate);
 
   if (f.status === 'ok') {
     // Alleen de datum noemen. Er ook "over N weken" bij zetten leest prettig,
@@ -649,7 +727,7 @@ function syncFormHint() {
   const existing = date ? getEntry(date) : null;
   const hint = $('entryHint');
   if (existing) {
-    hint.textContent = t('form.exists', { kg: fmtKg(existing.kg), date: fmtDateShort(date) });
+    hint.textContent = t('form.exists', { kg: fmtWeight(existing.kg), date: fmtDateShort(date) });
     $('saveBtn').textContent = t('form.update');
   } else {
     hint.textContent = '';
@@ -660,8 +738,8 @@ function syncFormHint() {
 function loadDateIntoForm(date) {
   $('entryDate').value = date;
   const existing = getEntry(date);
-  $('entryWeight').value = existing ? fmtKg(existing.kg) : '';
-  $('entryWaist').value = existing && existing.cm !== null ? fmtKg(existing.cm) : '';
+  $('entryWeight').value = existing ? fmtWeight(existing.kg) : '';
+  $('entryWaist').value = existing && existing.cm !== null ? fmtLength(existing.cm) : '';
   $('entryNote').value = existing ? existing.note : '';
   syncFormHint();
 }
@@ -674,34 +752,42 @@ for (const btn of document.querySelectorAll('.stepper__btn')) {
   btn.addEventListener('click', () => {
     const input = $('entryWeight');
     const entries = listEntries();
-    const base = parseNum(input.value)
-      ?? (entries.length ? entries[entries.length - 1].kg : 80);
-    const next = Math.max(20, Math.min(400, base + Number(btn.dataset.step)));
-    input.value = fmtKg(next);
+    // Alles hier gaat in de eenheid die in het veld staat, niet in kilo's.
+    const grens = rangeFor('weight');
+    const basis = parseNum(input.value)
+      ?? toDisplayWeight(entries.length ? entries[entries.length - 1].kg : 80);
+    // 0,1 kg en 0,2 lb schelen allebei zo'n honderd gram: eenzelfde tikje.
+    const stap = Number(btn.dataset.step) * (units() === 'imperial' ? 2 : 1);
+    const volgende = Math.max(grens.min, Math.min(grens.max, basis + stap));
+    input.value = fmtNum(volgende);
   });
 }
 
 $('entryForm').addEventListener('submit', (e) => {
   e.preventDefault();
   const date = $('entryDate').value || todayISO();
-  const kg = parseNum($('entryWeight').value);
+  const gewichtGrens = rangeFor('weight');
+  const ingevoerd = parseNum($('entryWeight').value);
 
-  if (kg === null || kg < 20 || kg > 400) {
-    toast(t('toast.weightRange'));
+  if (ingevoerd === null || ingevoerd < gewichtGrens.min || ingevoerd > gewichtGrens.max) {
+    toast(t('toast.weightRange', gewichtGrens));
     $('entryWeight').focus();
     return;
   }
+  const kg = toStoredWeight(ingevoerd);
   if (date > todayISO()) {
     toast(t('toast.noFuture'));
     return;
   }
 
-  const cm = parseNum($('entryWaist').value);
-  if (cm !== null && (cm < 40 || cm > 200)) {
-    toast(t('toast.waistRange'));
+  const middelGrens = rangeFor('waist');
+  const middel = parseNum($('entryWaist').value);
+  if (middel !== null && (middel < middelGrens.min || middel > middelGrens.max)) {
+    toast(t('toast.waistRange', middelGrens));
     $('entryWaist').focus();
     return;
   }
+  const cm = middel === null ? null : toStoredLength(middel);
 
   const { ok, isNew } = saveEntry(date, kg, $('entryNote').value, cm);
   if (!ok) {
@@ -712,12 +798,12 @@ $('entryForm').addEventListener('submit', (e) => {
   // Eerste meting? Gebruik die meteen als startgewicht.
   if (settings.startWeight === null && listEntries().length === 1) {
     settings = patchSettings({ startWeight: kg });
-    $('setStart').value = fmtKg(kg);
+    $('setStart').value = fmtWeight(kg);
   }
 
   toast(isNew
-    ? t('toast.saved', { kg: fmtKg(kg) })
-    : t('toast.updated', { date: fmtDateShort(date), kg: fmtKg(kg) }));
+    ? t('toast.saved', { kg: fmtWeight(kg) })
+    : t('toast.updated', { date: fmtDateShort(date), kg: fmtWeight(kg) }));
   $('entryNote').value = '';
   $('entryWaist').value = '';
   syncFormHint();
@@ -778,8 +864,16 @@ function renderChartView() {
     }
   }
 
-  const eenheid = maat === 'cm' ? 'cm' : 'kg';
+  const naarScherm = maat === 'cm' ? toDisplayLength : toDisplayWeight;
+  const eenheid = maat === 'cm' ? unitLength() : unitWeight();
   const series = buildSeries(entries, period, maat);
+  // De grafiek tekent kale getallen; omrekenen gebeurt hier, aan de rand.
+  const punten = series.points.map((p) => ({
+    ...p,
+    value: naarScherm(p.value),
+    min: naarScherm(p.min),
+    max: naarScherm(p.max),
+  }));
   const host = $('chartHost');
   const empty = $('chartEmpty');
   const legend = $('chartLegend');
@@ -802,20 +896,29 @@ function renderChartView() {
   legend.hidden = !(period === 'day' && series.points.length > 2);
   $('legendMaat').textContent = t(maat === 'cm' ? 'chart.waist' : 'chart.weight');
 
+  let gemiddelden = null;
+  if (period === 'day') {
+    gemiddelden = new Map();
+    for (const [datum, waarde] of movingAverage(entries, 7, maat)) {
+      gemiddelden.set(datum, naarScherm(waarde));
+    }
+  }
+
   renderChart(host, {
-    points: series.points,
+    points: punten,
     mode: series.mode,
     // Het streefgewicht hoort niet in een grafiek over centimeters.
-    goal: maat === 'kg' ? settings.goalWeight : null,
-    avgMap: period === 'day' ? movingAverage(entries, 7, maat) : null,
+    goal: maat === 'kg' && settings.goalWeight !== null
+      ? toDisplayWeight(settings.goalWeight) : null,
+    avgMap: gemiddelden,
     eenheid,
   });
 
   /* trend over de getoonde periode */
   const trendEl = $('chartTrend');
-  if (series.points.length >= 2) {
-    const d = series.points[series.points.length - 1].value - series.points[0].value;
-    trendEl.textContent = `${fmtDelta(d)} ${eenheid}`;
+  if (punten.length >= 2) {
+    const d = punten[punten.length - 1].value - punten[0].value;
+    trendEl.textContent = `${fmtDelta(d)} ${eenheid}`;   // al omgerekend
     setDeltaClass(trendEl, d);
   } else {
     trendEl.textContent = '';
@@ -823,12 +926,12 @@ function renderChartView() {
   }
 
   /* laagste / gemiddeld / hoogste over de getoonde punten */
-  const lows  = series.points.map((p) => p.min);
-  const highs = series.points.map((p) => p.max);
-  const avg   = series.points.reduce((a, p) => a + p.value, 0) / series.points.length;
-  $('chartMin').textContent = `${fmtKg(Math.min(...lows))}`;
-  $('chartAvg').textContent = `${fmtKg(avg)}`;
-  $('chartMax').textContent = `${fmtKg(Math.max(...highs))}`;
+  const lows  = punten.map((p) => p.min);
+  const highs = punten.map((p) => p.max);
+  const avg   = punten.reduce((a, p) => a + p.value, 0) / punten.length;
+  $('chartMin').textContent = `${fmtNum(Math.min(...lows))}`;
+  $('chartAvg').textContent = `${fmtNum(avg)}`;
+  $('chartMax').textContent = `${fmtNum(Math.max(...highs))}`;
 }
 
 /* ── Historie ───────────────────────────────────────────────── */
@@ -865,7 +968,7 @@ function renderHistory() {
     dateEl.textContent = fmtDateLong(e.date);
     main.append(dateEl);
     const bijschrift = [
-      e.cm !== null ? `${fmtKg(e.cm)} cm` : null,
+      e.cm !== null ? `${fmtLength(e.cm)} ${unitLength()}` : null,
       e.note || null,
     ].filter(Boolean).join(' · ');
 
@@ -878,11 +981,11 @@ function renderHistory() {
 
     const kg = document.createElement('div');
     kg.className = 'hitem__kg';
-    kg.textContent = fmtKg(e.kg);
+    kg.textContent = fmtWeight(e.kg);
 
     const dl = document.createElement('div');
     dl.className = 'hitem__delta';
-    dl.textContent = delta === null ? '' : fmtDelta(delta);
+    dl.textContent = delta === null ? '' : fmtWeightDelta(delta);
     setDeltaClass(dl, delta);
 
     const del = document.createElement('button');
@@ -919,36 +1022,60 @@ function renderBmi() {
   const value = last && settings.heightCm ? bmi(last.kg, settings.heightCm) : null;
   out.textContent = value === null
     ? t('bmi.noHeight')
-    : t('bmi.line', { value: fmtKg(value), label: t(bmiLabel(value)), kg: fmtKg(last.kg) });
+    : t('bmi.line', { value: fmtNum(value), label: t(bmiLabel(value)), kg: fmtWeight(last.kg) });
 }
 
-function bindNumberSetting(inputId, key, { integer = false, min, max } = {}) {
+/** De melding bij een lengte buiten bereik, in de eenheid van nu. */
+function lengteMelding() {
+  return t('toast.setupHeight', {
+    min: heightBound(LIMITS.height.min, 'up'),
+    max: heightBound(LIMITS.height.max, 'down'),
+  });
+}
+
+/**
+ * Koppelt een invoerveld aan een instelling. Het veld staat in de eenheid die
+ * de gebruiker koos, de instelling zelf altijd in kilo's of centimeters — dus
+ * hier wordt heen en weer gerekend.
+ */
+function bindMeasureSetting(inputId, key, kind) {
   const input = $(inputId);
   input.addEventListener('change', () => {
     const raw = input.value.trim();
+
     if (raw === '') {
       settings = patchSettings({ [key]: null });
       input.value = '';
-    } else {
-      let n = parseNum(raw);
-      if (n === null || n < min || n > max) {
-        toast(t('toast.range', { min, max }));
-        input.value = settings[key] === null ? '' : (integer ? String(settings[key]) : fmtKg(settings[key]));
+    } else if (kind === 'height') {
+      const cm = parseHeightInput(raw);
+      if (cm === null || cm < LIMITS.height.min || cm > LIMITS.height.max) {
+        toast(lengteMelding());
+        input.value = fmtHeight(settings[key]);
         return;
       }
-      if (integer) n = Math.round(n);
-      settings = patchSettings({ [key]: n });
-      input.value = integer ? String(n) : fmtKg(n);
+      settings = patchSettings({ [key]: Math.round(cm) });
+      input.value = fmtHeight(settings[key]);
+    } else {
+      const grens = rangeFor('weight');
+      const n = parseNum(raw);
+      if (n === null || n < grens.min || n > grens.max) {
+        toast(t('toast.weightRange', grens));
+        input.value = settings[key] === null ? '' : fmtWeight(settings[key]);
+        return;
+      }
+      settings = patchSettings({ [key]: toStoredWeight(n) });
+      input.value = fmtWeight(settings[key]);
     }
+
     renderToday();
     renderBmi();
     if (!$('view-chart').hidden) renderChartView();
   });
 }
 
-bindNumberSetting('setStart',  'startWeight', { min: 20,  max: 400 });
-bindNumberSetting('setGoal',   'goalWeight',  { min: 20,  max: 400 });
-bindNumberSetting('setHeight', 'heightCm',    { min: 100, max: 250, integer: true });
+bindMeasureSetting('setStart',  'startWeight', 'weight');
+bindMeasureSetting('setGoal',   'goalWeight',  'weight');
+bindMeasureSetting('setHeight', 'heightCm',    'height');
 
 /* herinnering */
 
@@ -1157,7 +1284,9 @@ $('backupLater').addEventListener('click', () => {
 });
 
 $('exportCsvBtn').addEventListener('click', () => {
-  const rows = [['datum', 'gewicht_kg', 'middel_cm', 'notitie']];
+  // Het bestand blijft metrisch, net als de opslag: de kop zegt welke
+  // eenheid erin staat, dus het blijft leesbaar los van je instelling.
+  const rows = [['date', 'weight_kg', 'waist_cm', 'note']];
   for (const e of listEntries()) {
     rows.push([
       e.date,
@@ -1255,9 +1384,9 @@ $('wipeBtn').addEventListener('click', () => {
 });
 
 function fillSettingsForm() {
-  $('setStart').value  = settings.startWeight === null ? '' : fmtKg(settings.startWeight);
-  $('setGoal').value   = settings.goalWeight  === null ? '' : fmtKg(settings.goalWeight);
-  $('setHeight').value = settings.heightCm    === null ? '' : String(settings.heightCm);
+  $('setStart').value  = settings.startWeight === null ? '' : fmtWeight(settings.startWeight);
+  $('setGoal').value   = settings.goalWeight  === null ? '' : fmtWeight(settings.goalWeight);
+  $('setHeight').value = fmtHeight(settings.heightCm);
   $('setTelemetrie').checked = !settings.telemetrieUit;
   $('setReminder').checked = !!settings.reminderEnabled;
   $('setReminderTime').value = settings.reminderTime || '08:00';
@@ -1460,12 +1589,15 @@ function boot() {
   // Wij bepalen zelf waar de pagina heen scrolt, niet de browser.
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
 
-  // De taal moet vaststaan voordat er ook maar één datum of getal
-  // opgemaakt wordt, anders staat het eerste scherm in de verkeerde taal.
+  // Taal én eenheid moeten vaststaan voordat er ook maar één datum of getal
+  // opgemaakt wordt, anders staat het eerste scherm in de verkeerde taal of
+  // in de verkeerde eenheid.
   setLanguage(settings.language);
+  setUnits(settings.units);
   document.documentElement.lang = language();
   applyStaticTranslations();
   syncLangButtons();
+  syncUnitButtons();
 
   applyTheme(settings.theme);
 

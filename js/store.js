@@ -3,7 +3,7 @@
    Alles staat in localStorage; er is geen server.
    ============================================================ */
 
-import { language, t } from './i18n.js';
+import { language, t, units } from './i18n.js';
 
 /* Deze drie sleutels houden bewust hun oude naam. Ze staan in localStorage
    op de telefoon van iedere gebruiker; hernoemen zou betekenen dat je voor
@@ -24,6 +24,7 @@ export const DEFAULT_SETTINGS = {
   reminderWeekday: 1,           // 0 = zondag … 6 = zaterdag; alleen bij 'weekly'
   theme: 'system',
   language: 'system',        // 'system' | 'en' | 'nl'
+  units: 'system',           // 'system' | 'metric' | 'imperial'
   lastReminderDate: null,   // YYYY-MM-DD waarop de melding al getoond is
   milestonesBackfilled: false,  // eenmalige inhaalslag over bestaande historie
   setupDeferredOn: null,        // YYYY-MM-DD waarop 'Later' gekozen is
@@ -137,8 +138,8 @@ export function weekdayLong(i) {
   return datumOpmaak({ weekday: 'long' }, 'dagLang').format(new Date(2021, 0, 3 + i));
 }
 
-/** 82.4 → "82,4" in het Nederlands, "82.4" in het Engels. */
-export function fmtKg(v, decimals = 1) {
+/** 82.4 → "82,4" in het Nederlands, "82.4" in het Engels. Kaal getal. */
+export function fmtNum(v, decimals = 1) {
   if (v === null || v === undefined || Number.isNaN(v)) return '—';
   return getalOpmaak(decimals).format(v);
 }
@@ -177,6 +178,135 @@ export function fmtDateShort(iso) {
 export function resetFormatCache() {
   cacheGetal.clear();
   cacheDatum.clear();
+}
+
+/* ── Eenheden ───────────────────────────────────────────────── */
+
+/* Metingen staan altijd in kilo's en centimeters in localStorage, ook als de
+   app op imperiaal staat. Omrekenen gebeurt pas bij tonen en bij invoeren.
+   Twee redenen: een back-up blijft dan één vaste betekenis houden, en wie
+   heen en weer wisselt van eenheid verliest geen cijfers achter de komma
+   op zijn hele historie. */
+const LB_PER_KG = 2.20462262185;
+const IN_PER_CM = 0.393700787402;
+
+const imperiaal = () => units() === 'imperial';
+
+/** De grenzen waarbinnen een invoer geldig is — altijd in kg en cm. */
+export const LIMITS = {
+  weight: { min: 20,  max: 400 },
+  waist:  { min: 40,  max: 200 },
+  height: { min: 100, max: 250 },
+};
+
+export function toDisplayWeight(kg) {
+  if (kg === null || kg === undefined) return kg;
+  return imperiaal() ? kg * LB_PER_KG : kg;
+}
+
+/* Terugrekenen levert een staart aan decimalen op (170 lb = 77,1107029 kg).
+   Twee cijfers achter de komma is tien gram: fijner dan welke weegschaal ook,
+   en het houdt de opslag en de back-up leesbaar. */
+export function toStoredWeight(v) {
+  if (v === null || v === undefined) return v;
+  return Math.round((imperiaal() ? v / LB_PER_KG : v) * 100) / 100;
+}
+
+export function toDisplayLength(cm) {
+  if (cm === null || cm === undefined) return cm;
+  return imperiaal() ? cm * IN_PER_CM : cm;
+}
+
+export function toStoredLength(v) {
+  if (v === null || v === undefined) return v;
+  return Math.round((imperiaal() ? v / IN_PER_CM : v) * 10) / 10;
+}
+
+/** Een gewicht uit de opslag, klaar om te tonen. */
+export function fmtWeight(kg, decimals = 1) {
+  return fmtNum(toDisplayWeight(kg), decimals);
+}
+
+/** Een middelomtrek uit de opslag, klaar om te tonen. */
+export function fmtLength(cm, decimals = 1) {
+  return fmtNum(toDisplayLength(cm), decimals);
+}
+
+/* Een verschil schaalt net zo hard mee als de waarde zelf: beide eenheden
+   beginnen bij nul, dus vermenigvuldigen volstaat. */
+export function fmtWeightDelta(kg, decimals = 1) {
+  return fmtDelta(toDisplayWeight(kg), decimals);
+}
+
+export function fmtLengthDelta(cm, decimals = 1) {
+  return fmtDelta(toDisplayLength(cm), decimals);
+}
+
+/**
+ * De grenzen zoals ze in de gekozen eenheid op het scherm horen. Naar binnen
+ * afgerond, zodat alles wat de melding toestaat ook echt door de controle komt.
+ */
+export function rangeFor(kind) {
+  const grens = LIMITS[kind];
+  if (!imperiaal()) return { ...grens };
+  const naar = kind === 'weight' ? toDisplayWeight : toDisplayLength;
+  return { min: Math.ceil(naar(grens.min)), max: Math.floor(naar(grens.max)) };
+}
+
+/* ── Lengte: voet en inches ─────────────────────────────────── */
+
+/** 71 → 5'11" — hele inches, want zo noemt niemand zijn lengte anders. */
+function voetEnInch(inches) {
+  let voet = Math.floor(inches / 12);
+  let rest = Math.round(inches - voet * 12);
+  if (rest === 12) { voet += 1; rest = 0; }
+  return `${voet}′${rest}″`;
+}
+
+/** Een lengte uit de opslag als invulbare tekst: "182" of "5′11″". */
+export function fmtHeight(cm) {
+  if (cm === null || cm === undefined) return '';
+  return imperiaal() ? voetEnInch(cm * IN_PER_CM) : String(Math.round(cm));
+}
+
+/** Dezelfde tekst, maar afgerond naar binnen — voor de grenzen in een melding. */
+export function heightBound(cm, richting) {
+  if (!imperiaal()) return String(cm);
+  const inches = cm * IN_PER_CM;
+  return voetEnInch(richting === 'up' ? Math.ceil(inches) : Math.floor(inches));
+}
+
+function losGetal(tekst) {
+  const schoon = tekst.replace(',', '.');
+  const n = Number(schoon);
+  return Number.isFinite(n) ? n : null;
+}
+
+/**
+ * Een ingetypte lengte naar centimeters. Metrisch is het gewoon een getal;
+ * imperiaal accepteert 5'11", 5' 11, 5-11, 5 11 en een kaal aantal inches.
+ * De vier schrijfwijzen kosten één reguliere expressie en schelen iedere
+ * Amerikaan het omrekenen van zijn eigen lengte.
+ */
+export function parseHeightInput(str) {
+  const tekst = String(str ?? '').trim()
+    .replace(/[′’]/g, "'")
+    .replace(/[″”]/g, '"');
+  if (tekst === '') return null;
+
+  if (!imperiaal()) return losGetal(tekst);
+
+  const metVoet = tekst.match(/^(\d+)\s*(?:'|′)\s*(\d+(?:[.,]\d+)?)?\s*"?$/)
+               || tekst.match(/^(\d+)\s*[- ]\s*(\d+(?:[.,]\d+)?)\s*"?$/);
+  if (metVoet) {
+    const voet = Number(metVoet[1]);
+    const inch = metVoet[2] === undefined ? 0 : losGetal(metVoet[2]);
+    if (inch === null || inch >= 12) return null;
+    return toStoredLength(voet * 12 + inch);
+  }
+
+  const n = losGetal(tekst.replace(/"$/, ''));
+  return n === null ? null : toStoredLength(n);
 }
 
 /* ── Metingen ───────────────────────────────────────────────── */
@@ -536,7 +666,7 @@ export function milestoneText(m) {
 
   const p = { ...m.params };
   for (const k of ['start', 'goal']) {
-    if (typeof p[k] === 'number') p[k] = fmtKg(p[k]);
+    if (typeof p[k] === 'number') p[k] = fmtWeight(p[k]);
   }
   if (p.unitKey) p.unit = t(p.unitKey);
 

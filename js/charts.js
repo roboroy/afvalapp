@@ -6,7 +6,7 @@
                      met een band van laagste tot hoogste meting
    ============================================================ */
 
-import { fromISO, fmtKg } from './store.js';
+import { fromISO, fmtNum } from './store.js';
 import { t } from './i18n.js';
 
 const VB_W = 340;
@@ -119,7 +119,7 @@ export function renderChart(host, { points, mode, goal = null, avgMap = null, ee
     const y = yToPx(v);
     svg.append(svgEl('line', { class: 'c-grid', x1: PAD.left, y1: y, x2: VB_W - PAD.right, y2: y }));
     const lbl = svgEl('text', { class: 'c-axis', x: PAD.left - 6, y: y + 3.2, 'text-anchor': 'end' });
-    lbl.textContent = fmtKg(v, step < 1 ? 1 : 0);
+    lbl.textContent = fmtNum(v, step < 1 ? 1 : 0);
     svg.append(lbl);
   }
 
@@ -239,7 +239,7 @@ export function renderChart(host, { points, mode, goal = null, avgMap = null, ee
     selLine.setAttribute('x2', c.x);
     selLine.setAttribute('opacity', 1);
 
-    const parts = [`${fmtKg(p.value)} ${eenheid}`];
+    const parts = [`${fmtNum(p.value)} ${eenheid}`];
     if (p.count > 1) parts.push(t('chart.tooltipCount', { label: p.label, n: p.count }));
     else parts.push(p.label);
     tip.textContent = parts.join(' · ');

@@ -12,17 +12,35 @@ in your own browser's storage.
   your waist you can switch between weight and waist at the top
 - **History** — every measurement grouped by month, tap to edit, cross to
   delete, plus an overview of the milestones you reached
-- **Settings** — language, start and goal weight, height (for your BMI),
-  reminders, backups and export
+- **Settings** — language, units, start and goal weight, height (for your
+  BMI), reminders, backups and export
 
-The interface is available in **English and Dutch**. It follows your phone's
-language unless you pick one yourself under Settings.
+The interface is available in **English and Dutch**, in **metric or imperial**
+units. Both follow your phone unless you pick something yourself under
+Settings.
 
 ---
 
+## Metric or imperial
+
+**Settings → Units** switches between kilograms and centimetres, and pounds and
+inches. On **System** the app looks at the region of your phone's locale — the
+United States, Liberia and Myanmar get imperial, everywhere else metric. The
+region is what counts, not the language: an American who reads the app in Dutch
+still thinks in pounds.
+
+Your measurements are stored in kilograms and centimetres whatever you choose.
+Only what you see and what you type is converted, so switching back and forth
+costs you nothing and a backup keeps one fixed meaning. The same goes for the
+CSV export: its columns are `weight_kg` and `waist_cm`, and the header says so.
+
+Height is the one field that changes shape. In imperial you can write it as
+`5'11"`, `5-11`, `5 11` or as a plain number of inches, and the app shows it
+back as `5'11"`.
+
 ## Waist measurement
 
-Alongside your weight you can record your waist in centimetres. That field is
+Alongside your weight you can record your waist. That field is
 optional; most people weigh themselves daily and measure their waist once a
 week.
 
@@ -97,15 +115,15 @@ ever move the app somewhere else.
 
 ## Sharing your progress
 
-The **↗** button in the top right makes an image of your progress: your change
-in kilos, the line of your trend weight, your progress bar and your weigh-in
+The **↗** button in the top right makes an image of your progress: how much
+came off, the line of your trend weight, your progress bar and your weigh-in
 run. It goes through your phone's share sheet to WhatsApp, Signal, mail or
 whatever else you have.
 
-**By default no kilos appear on it.** You share that 4.8 kg came off and that
-you are 48% of the way — not what you weigh, not what your goal is, and the
-chart has an axis without numbers. If you do want to include it, tick **Include
-my weight in kilos**. That tick is off again every time; you decide per
+**By default your weight does not appear on it.** You share that 4.8 kg came
+off and that you are 48% of the way — not what you weigh, not what your goal
+is, and the chart has an axis without numbers. If you do want to include it,
+tick **Include my actual weight**. That tick is off again every time; you decide per
 message.
 
 You need at least three measurements, because before that there is no trend to
@@ -290,8 +308,8 @@ index.html              screen layout
 manifest.webmanifest    name, icons and colours for the home screen
 sw.js                   offline cache + background reminder
 css/styles.css          styling, light and dark theme
-js/i18n.js              translations, language choice and plurals
-js/store.js             storage, date helpers, aggregation by day/week/month/year
+js/i18n.js              translations, language and unit choice, plurals
+js/store.js             storage, unit conversion, dates, aggregation by day/week/month/year
 js/charts.js            the SVG chart (no external libraries)
 js/share.js             draws the shareable image on a canvas
 js/reminders.js         notifications, scheduling and the .ics export
@@ -307,6 +325,10 @@ Everything visible sits in `js/i18n.js` as a key with a value per language.
 Add a language code to `SUPPORTED`, add a block with the same keys, and
 `missingKeys('xx')` tells you what you still owe. Dates and numbers follow
 automatically through `Intl`.
+
+Two placeholders fill themselves in: `{unitW}` becomes kg or lb and `{unitL}`
+becomes cm or in, so a string like `'Weight ({unitW})'` needs no parameters at
+the call site — and nobody can forget to pass them.
 
 ## 5. Publishing a change
 

@@ -1,8 +1,8 @@
 /* ============================================================
    i18n.js — language selection and translated strings.
 
-   Deliberately imports nothing: store.js reads the active language from
-   here for its date and number formatting, so a dependency the other way
+   Deliberately imports nothing: store.js reads the active language and
+   unit system from here for its formatting, so a dependency the other way
    would be circular.
 
    English is the base language. A missing key falls back to English, and
@@ -13,8 +13,18 @@
 const SUPPORTED = ['en', 'nl'];
 const FALLBACK = 'en';
 
+const UNITS = ['metric', 'imperial'];
+const UNITS_FALLBACK = 'metric';
+
+/* Waar mensen hun eigen gewicht in ponden en hun lengte in voet noemen.
+   Het gaat om het land, niet om de taal: een Amerikaan die de app in het
+   Nederlands zet, denkt nog steeds in ponden. */
+const IMPERIAL_REGIONS = new Set(['US', 'LR', 'MM']);
+
 let current = FALLBACK;
+let currentUnits = UNITS_FALLBACK;
 const listeners = new Set();
+const unitListeners = new Set();
 
 /* ── Strings ────────────────────────────────────────────────── */
 
@@ -43,8 +53,9 @@ const STRINGS = {
     'a11y.measure': 'What you are viewing',
     'a11y.frequency': 'How often to remind',
     'a11y.language': 'Language',
-    'a11y.stepDown': 'Take off 0.1 kilo',
-    'a11y.stepUp': 'Add 0.1 kilo',
+    'a11y.units': 'Units',
+    'a11y.stepDown': 'Take off {step} {unitW}',
+    'a11y.stepUp': 'Add {step} {unitW}',
     'a11y.deleteEntry': 'Delete the measurement of {date}',
 
     /* ── Today ── */
@@ -54,11 +65,11 @@ const STRINGS = {
     'today.waist': 'Waist',
     'form.title': 'Add your weight',
     'form.date': 'Date',
-    'form.weight': 'Weight (kg)',
-    'form.waist': 'Waist in cm',
+    'form.weight': 'Weight ({unitW})',
+    'form.waist': 'Waist ({unitL})',
     'form.note': 'Note',
     'form.optional': '(optional)',
-    'form.waistPlaceholder': 'e.g. 94.5',
+    'eg.value': 'e.g. {n}',
     'form.notePlaceholder': 'e.g. after exercise',
     'form.save': 'Save',
     'form.update': 'Update',
@@ -92,14 +103,25 @@ const STRINGS = {
     'settings.language.system': 'System',
     'settings.language.hint':
       'Follows your phone when set to System. Dates and numbers change along with it.',
+
+    'settings.units': 'Units',
+    'settings.units.system': 'System',
+    'settings.units.metric': 'Metric',
+    'settings.units.imperial': 'Imperial',
+    'settings.units.hint':
+      'Metric is kilograms and centimetres, imperial is pounds and inches. '
+      + 'Your measurements are always stored the same way, so switching back '
+      + 'later changes nothing about what you have saved.',
+    'unit.kg': 'kg',
+    'unit.lb': 'lb',
+    'unit.cm': 'cm',
+    'unit.in': 'in',
+
     'settings.goals': 'Goals',
-    'settings.startWeight': 'Starting weight (kg)',
-    'settings.goalWeight': 'Goal weight (kg)',
-    'settings.height': 'Height (cm)',
+    'settings.startWeight': 'Starting weight ({unitW})',
+    'settings.goalWeight': 'Goal weight ({unitW})',
+    'settings.height': 'Height ({unitL})',
     'settings.heightHint': '— for your BMI',
-    'settings.startPlaceholder': 'e.g. 95.0',
-    'settings.goalPlaceholder': 'e.g. 80.0',
-    'settings.heightPlaceholder': 'e.g. 182',
 
     'reminder.title': 'Reminder',
     'reminder.toggle': 'Remind me to weigh in',
@@ -157,7 +179,7 @@ const STRINGS = {
     'setup.title': 'One more thing',
     'setup.save': 'Save',
     'sharecard.title': 'Share progress',
-    'sharecard.includeWeights': 'Include my weight in kilos',
+    'sharecard.includeWeights': 'Include my actual weight',
     'sharecard.hint': 'Without the tick nobody sees what you weigh — only how much came off.',
     'sharecard.close': 'Close',
     'sharecard.share': 'Share',
@@ -168,37 +190,36 @@ const STRINGS = {
     /* ── Runtime: today ── */
     'theme.toast': 'Theme: {name}',
     'theme.system': 'system', 'theme.light': 'light', 'theme.dark': 'dark',
-    'today.deltaDays': '{delta} kg in 7 days',
-    'today.deltaSince': '{delta} kg since {date}',
+    'today.deltaDays': '{delta} {unitW} in 7 days',
+    'today.deltaSince': '{delta} {unitW} since {date}',
     'today.trendNote': 'Average over 7 days — smooths out the daily swings.',
     'today.trendSoon': 'From three measurements on, the app shows your trend weight.',
-    'today.measured': 'Measured {date}: {kg} kg',
+    'today.measured': 'Measured {date}: {kg} {unitW}',
     'today.lastMeasured': 'Last measurement: {date}',
     'today.noMeasurement': 'No measurements yet — add your weight below.',
     'goal.reached': 'Goal reached! 🎉',
-    'goal.remaining': '{kg} kg to go',
-    'form.exists': '{kg} kg is already saved for {date}. Saving overwrites it.',
+    'goal.remaining': '{kg} {unitW} to go',
+    'form.exists': '{kg} {unitW} is already saved for {date}. Saving overwrites it.',
     'waist.measuredOn': 'measured {date}',
-    'waist.since': '{delta} cm since {date}',
+    'waist.since': '{delta} {unitL} since {date}',
 
     /* ── Forecast ── */
-    'forecast.pace': 'Pace {rate} kg per week.',
-    'forecast.withinWeek': 'Pace {rate} kg per week. At this pace you reach your goal within a week.',
-    'forecast.date': 'Pace {rate} kg per week. At this pace you reach your goal around {date}.',
+    'forecast.pace': 'Pace {rate} {unitW} per week.',
+    'forecast.withinWeek': 'Pace {rate} {unitW} per week. At this pace you reach your goal within a week.',
+    'forecast.date': 'Pace {rate} {unitW} per week. At this pace you reach your goal around {date}.',
     'forecast.done': 'You are at or below your goal weight. Well done.',
-    'forecast.flat': 'Pace {rate} kg per week. Your weight is not going down right now, so there is no date to give.',
-    'forecast.faraway': 'Pace {rate} kg per week. At this pace your goal is years away — an interim goal might help.',
+    'forecast.flat': 'Pace {rate} {unitW} per week. Your weight is not going down right now, so there is no date to give.',
+    'forecast.faraway': 'Pace {rate} {unitW} per week. At this pace your goal is years away — an interim goal might help.',
     'forecast.tooLittle': 'After two weeks of measuring the app can predict when you reach your goal.',
 
     /* ── Toasts ── */
-    'toast.saved': '{kg} kg saved',
-    'toast.updated': '{date} updated to {kg} kg',
+    'toast.saved': '{kg} {unitW} saved',
+    'toast.updated': '{date} updated to {kg} {unitW}',
     'toast.saveFailed': 'Saving failed — is your browser storage full?',
-    'toast.weightRange': 'Enter a weight between 20 and 400 kg.',
-    'toast.waistRange': 'Enter a waist between 40 and 200 cm.',
+    'toast.weightRange': 'Enter a weight between {min} and {max} {unitW}.',
+    'toast.waistRange': 'Enter a waist between {min} and {max} {unitL}.',
     'toast.noFuture': 'You cannot pick a date in the future.',
     'toast.deleted': 'Measurement deleted',
-    'toast.range': 'Enter a value between {min} and {max}.',
     'toast.reminderOn': 'Reminder on: {when}',
     'toast.reminder': 'Reminder: {when}',
     'toast.noPermission': 'Without permission the app cannot alert you. The calendar event still works.',
@@ -213,8 +234,8 @@ const STRINGS = {
     'toast.wiped': 'All data erased',
     'toast.installed': '{app} is now on your home screen',
     'toast.setupSaved': 'Added — your progress is now calculated',
-    'toast.setupGoal': 'Enter a goal weight between 20 and 400 kg.',
-    'toast.setupHeight': 'Enter a height between 100 and 250 cm.',
+    'toast.setupGoal': 'Enter a goal weight between {min} and {max} {unitW}.',
+    'toast.setupHeight': 'Enter a height between {min} and {max}.',
     'toast.linkCopied': 'Link copied',
     'toast.copyBlocked': 'Copying was blocked — the link is selected',
     'toast.copyFailed': 'Copying failed. Select the link by hand.',
@@ -285,14 +306,14 @@ const STRINGS = {
     /* ── BMI ── */
     'bmi.under': 'underweight', 'bmi.healthy': 'healthy weight',
     'bmi.over': 'overweight', 'bmi.obese': 'obesity',
-    'bmi.line': 'BMI: {value} — {label} (at {kg} kg).',
+    'bmi.line': 'BMI: {value} — {label} (at {kg} {unitW}).',
     'bmi.noHeight': 'Enter your height to see your BMI.',
 
     /* ── Milestones ── */
     'ms.goalPart': '{pct}% of the way',
-    'ms.goalPartBody': 'You are {pct}% of the way from {start} to {goal} kg.',
+    'ms.goalPartBody': 'You are {pct}% of the way from {start} to {goal} {unitW}.',
     'ms.goalDone': 'Goal weight reached',
-    'ms.goalDoneBody': 'You are at {goal} kg. That was the goal.',
+    'ms.goalDoneBody': 'You are at {goal} {unitW}. That was the goal.',
     'ms.bmi30': 'Out of the obesity range',
     'ms.bmi30Body': 'Your BMI is under 30. That is a real health gain.',
     'ms.bmi25': 'Healthy weight',
@@ -305,9 +326,9 @@ const STRINGS = {
     /* ── Share card ── */
     'card.title': 'MY PROGRESS',
     'card.since': 'since {date}',
-    'card.goal': 'goal {kg} kg',
+    'card.goal': 'goal {kg} {unitW}',
     'card.pctOfGoal': '{pct}% of my goal',
-    'card.now': 'now {kg} kg',
+    'card.now': 'now {kg} {unitW}',
     'card.weighedDays': 'weighed {n} days in a row',
     'card.weighedWeeks': 'weighed {n} weeks in a row',
     'card.measurements': '{n} measurements',
@@ -337,8 +358,9 @@ const STRINGS = {
     'a11y.measure': 'Wat je bekijkt',
     'a11y.frequency': 'Hoe vaak herinneren',
     'a11y.language': 'Taal',
-    'a11y.stepDown': '0,1 kilo eraf',
-    'a11y.stepUp': '0,1 kilo erbij',
+    'a11y.units': 'Eenheden',
+    'a11y.stepDown': '{step} {unitW} eraf',
+    'a11y.stepUp': '{step} {unitW} erbij',
     'a11y.deleteEntry': 'Meting van {date} verwijderen',
 
     'today.currentWeight': 'Huidig gewicht',
@@ -347,11 +369,11 @@ const STRINGS = {
     'today.waist': 'Middelomtrek',
     'form.title': 'Gewicht invullen',
     'form.date': 'Datum',
-    'form.weight': 'Gewicht (kg)',
-    'form.waist': 'Middel in cm',
+    'form.weight': 'Gewicht ({unitW})',
+    'form.waist': 'Middel ({unitL})',
     'form.note': 'Notitie',
     'form.optional': '(optioneel)',
-    'form.waistPlaceholder': 'Bijv. 94,5',
+    'eg.value': 'Bijv. {n}',
     'form.notePlaceholder': 'Bijv. na het sporten',
     'form.save': 'Opslaan',
     'form.update': 'Bijwerken',
@@ -382,14 +404,25 @@ const STRINGS = {
     'settings.language.system': 'Systeem',
     'settings.language.hint':
       'Volgt je telefoon als je Systeem kiest. Datums en getallen gaan mee.',
+
+    'settings.units': 'Eenheden',
+    'settings.units.system': 'Systeem',
+    'settings.units.metric': 'Metrisch',
+    'settings.units.imperial': 'Imperiaal',
+    'settings.units.hint':
+      'Metrisch is kilo\u2019s en centimeters, imperiaal is ponden en inches. '
+      + 'Je metingen worden altijd hetzelfde opgeslagen, dus later terugzetten '
+      + 'verandert niets aan wat je hebt bewaard.',
+    'unit.kg': 'kg',
+    'unit.lb': 'lb',
+    'unit.cm': 'cm',
+    'unit.in': 'inch',
+
     'settings.goals': 'Doelen',
-    'settings.startWeight': 'Startgewicht (kg)',
-    'settings.goalWeight': 'Streefgewicht (kg)',
-    'settings.height': 'Lengte (cm)',
+    'settings.startWeight': 'Startgewicht ({unitW})',
+    'settings.goalWeight': 'Streefgewicht ({unitW})',
+    'settings.height': 'Lengte ({unitL})',
     'settings.heightHint': '— voor je BMI',
-    'settings.startPlaceholder': 'Bijv. 95,0',
-    'settings.goalPlaceholder': 'Bijv. 80,0',
-    'settings.heightPlaceholder': 'Bijv. 182',
 
     'reminder.title': 'Herinnering',
     'reminder.toggle': 'Herinnering om te wegen',
@@ -448,7 +481,7 @@ const STRINGS = {
     'setup.title': 'Nog even aanvullen',
     'setup.save': 'Opslaan',
     'sharecard.title': 'Voortgang delen',
-    'sharecard.includeWeights': 'Mijn gewicht in kilo\u2019s meesturen',
+    'sharecard.includeWeights': 'Mijn gewicht zelf meesturen',
     'sharecard.hint': 'Zonder vinkje ziet niemand wat je weegt — alleen hoeveel eraf is.',
     'sharecard.close': 'Sluiten',
     'sharecard.share': 'Delen',
@@ -458,35 +491,34 @@ const STRINGS = {
     /* ── Runtime: today ── */
     'theme.toast': 'Thema: {name}',
     'theme.system': 'systeem', 'theme.light': 'licht', 'theme.dark': 'donker',
-    'today.deltaDays': '{delta} kg in 7 dagen',
-    'today.deltaSince': '{delta} kg sinds {date}',
+    'today.deltaDays': '{delta} {unitW} in 7 dagen',
+    'today.deltaSince': '{delta} {unitW} sinds {date}',
     'today.trendNote': 'Gemiddelde over 7 dagen — dempt dagelijkse schommelingen.',
     'today.trendSoon': 'Vanaf drie metingen toont de app je trendgewicht.',
-    'today.measured': 'Meting {date}: {kg} kg',
+    'today.measured': 'Meting {date}: {kg} {unitW}',
     'today.lastMeasured': 'Laatste meting: {date}',
     'today.noMeasurement': 'Nog geen meting — vul hieronder je gewicht in.',
     'goal.reached': 'Doel gehaald! 🎉',
-    'goal.remaining': 'nog {kg} kg te gaan',
-    'form.exists': 'Er staat al {kg} kg op {date}. Opslaan overschrijft die meting.',
+    'goal.remaining': 'nog {kg} {unitW} te gaan',
+    'form.exists': 'Er staat al {kg} {unitW} op {date}. Opslaan overschrijft die meting.',
     'waist.measuredOn': 'gemeten {date}',
-    'waist.since': '{delta} cm sinds {date}',
+    'waist.since': '{delta} {unitL} sinds {date}',
 
-    'forecast.pace': 'Tempo {rate} kg per week.',
-    'forecast.withinWeek': 'Tempo {rate} kg per week. Bij dit tempo zit je binnen een week op je doel.',
-    'forecast.date': 'Tempo {rate} kg per week. Bij dit tempo zit je rond {date} op je doel.',
+    'forecast.pace': 'Tempo {rate} {unitW} per week.',
+    'forecast.withinWeek': 'Tempo {rate} {unitW} per week. Bij dit tempo zit je binnen een week op je doel.',
+    'forecast.date': 'Tempo {rate} {unitW} per week. Bij dit tempo zit je rond {date} op je doel.',
     'forecast.done': 'Je zit op of onder je streefgewicht. Mooi gedaan.',
-    'forecast.flat': 'Tempo {rate} kg per week. Je gewicht daalt op dit moment niet, dus een datum voor je doel valt nog niet te geven.',
-    'forecast.faraway': 'Tempo {rate} kg per week. In dit tempo duurt je doel nog jaren — misschien is een tussendoel handiger.',
+    'forecast.flat': 'Tempo {rate} {unitW} per week. Je gewicht daalt op dit moment niet, dus een datum voor je doel valt nog niet te geven.',
+    'forecast.faraway': 'Tempo {rate} {unitW} per week. In dit tempo duurt je doel nog jaren — misschien is een tussendoel handiger.',
     'forecast.tooLittle': 'Na twee weken meten kan de app voorspellen wanneer je je doel haalt.',
 
-    'toast.saved': '{kg} kg opgeslagen',
-    'toast.updated': '{date} bijgewerkt naar {kg} kg',
+    'toast.saved': '{kg} {unitW} opgeslagen',
+    'toast.updated': '{date} bijgewerkt naar {kg} {unitW}',
     'toast.saveFailed': 'Opslaan mislukt — is de opslag van je browser vol?',
-    'toast.weightRange': 'Vul een gewicht in tussen 20 en 400 kg.',
-    'toast.waistRange': 'Vul een middelomtrek in tussen 40 en 200 cm.',
+    'toast.weightRange': 'Vul een gewicht in tussen {min} en {max} {unitW}.',
+    'toast.waistRange': 'Vul een middelomtrek in tussen {min} en {max} {unitL}.',
     'toast.noFuture': 'Je kunt geen datum in de toekomst kiezen.',
     'toast.deleted': 'Meting verwijderd',
-    'toast.range': 'Vul een waarde in tussen {min} en {max}.',
     'toast.reminderOn': 'Herinnering aan: {when}',
     'toast.reminder': 'Herinnering: {when}',
     'toast.noPermission': 'Zonder toestemming kan de app je niet waarschuwen. De agenda-afspraak werkt wel.',
@@ -501,8 +533,8 @@ const STRINGS = {
     'toast.wiped': 'Alle gegevens gewist',
     'toast.installed': '{app} staat nu op je beginscherm',
     'toast.setupSaved': 'Aangevuld — je voortgang wordt nu berekend',
-    'toast.setupGoal': 'Vul een streefgewicht in tussen 20 en 400 kg.',
-    'toast.setupHeight': 'Vul een lengte in tussen 100 en 250 cm.',
+    'toast.setupGoal': 'Vul een streefgewicht in tussen {min} en {max} {unitW}.',
+    'toast.setupHeight': 'Vul een lengte in tussen {min} en {max}.',
     'toast.linkCopied': 'Link gekopieerd',
     'toast.copyBlocked': 'Kopiëren mocht niet — de link staat geselecteerd',
     'toast.copyFailed': 'Kopiëren lukte niet. Selecteer de link met de hand.',
@@ -565,13 +597,13 @@ const STRINGS = {
 
     'bmi.under': 'ondergewicht', 'bmi.healthy': 'gezond gewicht',
     'bmi.over': 'overgewicht', 'bmi.obese': 'obesitas',
-    'bmi.line': 'BMI: {value} — {label} (bij {kg} kg).',
+    'bmi.line': 'BMI: {value} — {label} (bij {kg} {unitW}).',
     'bmi.noHeight': 'Vul je lengte in om je BMI te zien.',
 
     'ms.goalPart': '{pct}% van de weg',
-    'ms.goalPartBody': 'Je bent {pct}% onderweg van {start} naar {goal} kg.',
+    'ms.goalPartBody': 'Je bent {pct}% onderweg van {start} naar {goal} {unitW}.',
     'ms.goalDone': 'Streefgewicht bereikt',
-    'ms.goalDoneBody': 'Je zit op {goal} kg. Dat was het doel.',
+    'ms.goalDoneBody': 'Je zit op {goal} {unitW}. Dat was het doel.',
     'ms.bmi30': 'Uit de obesitas-categorie',
     'ms.bmi30Body': 'Je BMI is onder de 30. Dat is een echte gezondheidswinst.',
     'ms.bmi25': 'Gezond gewicht',
@@ -583,9 +615,9 @@ const STRINGS = {
 
     'card.title': 'MIJN VOORTGANG',
     'card.since': 'sinds {date}',
-    'card.goal': 'doel {kg} kg',
+    'card.goal': 'doel {kg} {unitW}',
     'card.pctOfGoal': '{pct}% van mijn doel',
-    'card.now': 'nu {kg} kg',
+    'card.now': 'nu {kg} {unitW}',
     'card.weighedDays': '{n} dagen op rij gewogen',
     'card.weighedWeeks': '{n} weken op rij gewogen',
     'card.measurements': '{n} metingen',
@@ -643,6 +675,66 @@ export function onLanguageChange(fn) {
   return () => listeners.delete(fn);
 }
 
+/* ── Unit system ────────────────────────────────────────────── */
+
+/**
+ * Turn a preference ('system' | 'metric' | 'imperial') into a system we can
+ * use. 'system' looks at the region of the phone's own locale, not at the
+ * chosen app language.
+ */
+export function resolveUnits(preference) {
+  if (UNITS.includes(preference)) return preference;
+
+  const tags = navigator.languages?.length
+    ? navigator.languages
+    : [navigator.language || ''];
+
+  for (const tag of tags) {
+    let region = '';
+    try {
+      region = new Intl.Locale(tag).maximize().region || '';
+    } catch {
+      // Oudere browsers kennen Intl.Locale niet; dan maar met de hand.
+      const delen = String(tag).split('-');
+      region = (delen[delen.length - 1] || '').toUpperCase();
+    }
+    if (region) return IMPERIAL_REGIONS.has(region) ? 'imperial' : 'metric';
+  }
+  return UNITS_FALLBACK;
+}
+
+/** @returns {string} the unit system actually in use now */
+export function setUnits(preference) {
+  const next = resolveUnits(preference);
+  if (next === currentUnits) return currentUnits;
+
+  currentUnits = next;
+  for (const fn of unitListeners) {
+    try { fn(next); } catch { /* one bad listener must not stop the rest */ }
+  }
+  return currentUnits;
+}
+
+export function units() {
+  return currentUnits;
+}
+
+/** 'kg' or 'lb' — the label that belongs with a weight right now. */
+export function unitWeight() {
+  return t(currentUnits === 'imperial' ? 'unit.lb' : 'unit.kg');
+}
+
+/** 'cm' or 'in' — the label that belongs with a waist or height right now. */
+export function unitLength() {
+  return t(currentUnits === 'imperial' ? 'unit.in' : 'unit.cm');
+}
+
+/** Register a callback for unit changes; returns an unsubscribe function. */
+export function onUnitsChange(fn) {
+  unitListeners.add(fn);
+  return () => unitListeners.delete(fn);
+}
+
 /* ── Lookup ─────────────────────────────────────────────────── */
 
 export function t(key, params = {}) {
@@ -655,8 +747,14 @@ export function t(key, params = {}) {
     entry = entry[rule] ?? entry.other;
   }
 
-  return String(entry).replace(/\{(\w+)\}/g, (heel, naam) =>
-    (naam in params ? String(params[naam]) : heel));
+  /* {unitW} en {unitL} staan in tientallen zinnen. Ze hier invullen scheelt
+     dat elke aanroep ze moet meegeven — en dat iemand het ergens vergeet. */
+  return String(entry).replace(/\{(\w+)\}/g, (heel, naam) => {
+    if (naam in params) return String(params[naam]);
+    if (naam === 'unitW') return unitWeight();
+    if (naam === 'unitL') return unitLength();
+    return heel;
+  });
 }
 
 /** Every key that has no translation yet in the given language. */
