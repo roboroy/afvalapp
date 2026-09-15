@@ -1,23 +1,21 @@
 /**
- * afvalapp-teller — telt hoe vaak de app geopend en geïnstalleerd wordt.
+ * afvalapp-teller — telt hoe vaak de app geopend en geïnstalleerd wordt,
+ * uitgesplitst per land en per dag.
  *
- * Dit is bewust het domste ding dat werkt: er worden uitsluitend getallen
- * opgehoogd. Er wordt geen IP-adres, geen user agent, geen identificatie en
- * geen enkel gegeven uit de app opgeslagen. Ook niet gehasht — er is
- * simpelweg geen veld om het in te zetten.
+ * Er worden uitsluitend getallen opgehoogd. Het IP-adres wordt niet
+ * opgeslagen; Cloudflare leidt er aan de rand van zijn netwerk een landcode
+ * uit af en die wordt als losse teller bijgehouden.
  *
- * De opslag is D1 (SQLite) en niet KV, omdat KV leesacties tot een minuut
- * cachet. Met lezen-optellen-schrijven bovenop zo'n cache verdwijnen
- * tellingen: twee openingen binnen dezelfde minuut lezen allebei dezelfde
- * oude waarde en schrijven allebei datzelfde getal plus één. D1 hoogt in
- * één opdracht op en kan dat niet misgaan.
+ * Let op bij het lezen van de cijfers: bij kleine aantallen is een land met
+ * één telling geen statistiek maar een aanwijzing over één persoon. Zie het
+ * kopje "Wat dit niet is" in README.md.
  *
  * De tabel bevat niets anders dan dit:
- *   sleutel                      aantal
- *   totaal:openingen             1423
- *   totaal:installaties            37
- *   dag:2026-09-15:openingen       12
- *   dag:2026-09-15:installaties     1
+ *   totaal:openingen                          1423
+ *   totaal:installaties                         37
+ *   dag:2026-09-15:openingen                    12
+ *   land:NL:openingen                         1280
+ *   dag:2026-09-15:land:NL:openingen             9
  */
 
 const TOEGESTANE_HERKOMST = 'https://roboroy.github.io';
@@ -32,9 +30,29 @@ function corsKoppen(herkomst) {
   };
 }
 
-/** UTC-datum; een dagbucket hoeft niet op de minuut te kloppen. */
 function vandaagUTC() {
   return new Date().toISOString().slice(0, 10);
+}
+
+/**
+ * Tweeletterige landcode van Cloudflare. 'XX' als die ontbreekt of niet
+ * klopt — bijvoorbeeld bij Tor, of lokaal draaien.
+ */
+function landVan(request) {
+  const code = request.cf?.country;
+  return /^[A-Z]{2}$/.test(code || '') ? code : 'XX';
+}
+
+/** Splitst een sleutel uit de tabel op in zijn betekenis. */
+function ontleed(sleutel) {
+  const d = sleutel.split(':');
+  if (d[0] === 'totaal') return { soort: 'totaal', naam: d[1] };
+  if (d[0] === 'land') return { soort: 'land', land: d[1], naam: d[2] };
+  if (d[0] === 'dag' && d[2] === 'land') {
+    return { soort: 'dagland', dag: d[1], land: d[3], naam: d[4] };
+  }
+  if (d[0] === 'dag') return { soort: 'dag', dag: d[1], naam: d[2] };
+  return { soort: 'onbekend' };
 }
 
 export default {
@@ -49,13 +67,37 @@ export default {
 
     if (request.method === 'GET' && url.pathname === '/stats') {
       const { results } = await env.DB
-        .prepare("SELECT sleutel, aantal FROM tellingen WHERE sleutel LIKE 'totaal:%'")
+        .prepare("SELECT sleutel, aantal FROM tellingen WHERE sleutel LIKE 'totaal:%' OR sleutel LIKE 'land:%'")
         .all();
-      const vind = (naam) => results.find((r) => r.sleutel === `totaal:${naam}`)?.aantal ?? 0;
-      return new Response(
-        JSON.stringify({ openingen: vind('openingen'), installaties: vind('installaties') }),
-        { headers: { ...cors, 'Content-Type': 'application/json' } },
-      );
+
+      const uit = { openingen: 0, installaties: 0, landen: {} };
+      for (const rij of results) {
+        const k = ontleed(rij.sleutel);
+        if (k.soort === 'totaal') {
+          uit[k.naam] = rij.aantal;
+        } else if (k.soort === 'land') {
+          uit.landen[k.land] ??= { openingen: 0, installaties: 0 };
+          uit.landen[k.land][k.naam] = rij.aantal;
+        }
+      }
+
+      // ?dagen=30 geeft de verdeling per dag per land erbij.
+      const dagen = Number(url.searchParams.get('dagen'));
+      if (Number.isInteger(dagen) && dagen > 0) {
+        const { results: rijen } = await env.DB
+          .prepare("SELECT sleutel, aantal FROM tellingen WHERE sleutel LIKE 'dag:%' ORDER BY sleutel DESC LIMIT ?")
+          .bind(Math.min(dagen * 20, 2000))
+          .all();
+
+        uit.dagen = rijen
+          .map((r) => ({ ...ontleed(r.sleutel), aantal: r.aantal }))
+          .filter((r) => r.soort === 'dagland')
+          .map(({ dag, land, naam, aantal }) => ({ dag, land, naam, aantal }));
+      }
+
+      return new Response(JSON.stringify(uit), {
+        headers: { ...cors, 'Content-Type': 'application/json' },
+      });
     }
 
     if (request.method !== 'POST') {
@@ -70,15 +112,19 @@ export default {
       return new Response('Onbekend type', { status: 400, headers: cors });
     }
 
-    // Eén atomaire opdracht per sleutel: ophogen kan niet misgaan.
     const naam = soort === 'open' ? 'openingen' : 'installaties';
+    const dag = vandaagUTC();
+    const land = landVan(request);
+
     const ophogen = env.DB.prepare(
       `INSERT INTO tellingen (sleutel, aantal) VALUES (?, 1)
        ON CONFLICT(sleutel) DO UPDATE SET aantal = aantal + 1`,
     );
     await env.DB.batch([
       ophogen.bind(`totaal:${naam}`),
-      ophogen.bind(`dag:${vandaagUTC()}:${naam}`),
+      ophogen.bind(`dag:${dag}:${naam}`),
+      ophogen.bind(`land:${land}:${naam}`),
+      ophogen.bind(`dag:${dag}:land:${land}:${naam}`),
     ]);
 
     return new Response(null, { status: 204, headers: cors });

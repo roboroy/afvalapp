@@ -8,25 +8,26 @@ weet hoeveel mensen de Afvalapp gebruiken zonder iets over hen te bewaren.
 Eén tabel in een D1-database (SQLite), met twee kolommen en alleen getallen:
 
 ```
-sleutel                       aantal
-totaal:openingen                1423
-totaal:installaties               37
-dag:2026-09-15:openingen          12
-dag:2026-09-15:installaties        1
+sleutel                                  aantal
+totaal:openingen                           1423
+totaal:installaties                          37
+dag:2026-09-15:openingen                     12
+land:NL:openingen                          1280
+dag:2026-09-15:land:NL:openingen              9
 ```
 
 Geen IP-adres, geen user agent, geen identificatie, geen gegevens uit de app.
-Niet gehasht of versleuteld opgeslagen — er is simpelweg geen veld voor.
+
+Het **land** komt van Cloudflare zelf: die leidt aan de rand van zijn netwerk
+een tweeletterige code af uit het IP-adres en geeft die mee als
+`request.cf.country`. Dat adres wordt nergens vastgelegd; alleen de landcode
+wordt als teller opgehoogd. Ontbreekt de code of klopt hij niet — bijvoorbeeld
+bij Tor — dan wordt het `XX`.
 
 De dagsleutels gebruiken UTC, terwijl de app zijn eigen "hoogstens één keer
 per dag" op de lokale datum baseert. Wie 's nachts weegt kan daardoor in de
 UTC-dag ervoor belanden. Voor de totalen maakt dat niets uit; alleen de
 dagverdeling schuift dan een paar uur.
-
-Wat je *niet* kunt wegnemen: Cloudflare ziet net als elke webserver het
-IP-adres op het moment van het verzoek. De Worker doet daar niets mee en legt
-het nergens vast, maar het passeert wel. Dat staat ook zo in de app zelf
-onder Instellingen → Privacy.
 
 ## Waarom D1 en niet KV
 
@@ -88,11 +89,19 @@ opruimen in het Cloudflare-dashboard onder *Storage & Databases → KV*.
 
 ## Cijfers bekijken
 
+Totalen plus de verdeling per land:
+
 ```bash
 curl https://afvalapp-teller.roboroy.workers.dev/stats
 ```
 
-Of alles ineens, inclusief de dagcijfers:
+Met de verdeling per dag per land erbij:
+
+```bash
+curl "https://afvalapp-teller.roboroy.workers.dev/stats?dagen=30"
+```
+
+Of alles rechtstreeks uit de database:
 
 ```bash
 wrangler d1 execute afvalapp-teller --remote --command "SELECT * FROM tellingen ORDER BY sleutel"
@@ -107,8 +116,8 @@ wrangler d1 execute afvalapp-teller --remote --command "DELETE FROM tellingen"
 ## Gratis grenzen
 
 Het gratis plan kent een dagelijks maximum aan Worker-verzoeken en aan
-D1-rijen die je leest en schrijft. Elke telling schrijft twee rijen: het
-totaal en de dag. De app stuurt hoogstens één bericht per apparaat per dag,
+D1-rijen die je leest en schrijft. Elke telling schrijft vier rijen: het
+totaal, de dag, het land, en de dag per land. De app stuurt hoogstens één bericht per apparaat per dag,
 dus je zit met ruime marge onder die grenzen. Controleer de actuele limieten
 wel even in je dashboard — Cloudflare past ze weleens aan.
 
@@ -138,6 +147,12 @@ kent kan met `curl` een willekeurige `Origin` meesturen en de teller ophogen.
 
 Strenger maken zou betekenen dat je per IP moet gaan bijhouden wie hoe vaak
 telt — precies wat we hier níét willen.
+
+**En let op bij de landcijfers.** Bij kleine aantallen is een land met één
+telling geen statistiek maar een aanwijzing over één persoon: je weet dan niet
+"1% zit in Noorwegen" maar "die ene bekende in Noorwegen heeft de app geopend",
+en met de dagverdeling erbij ook wannéér. Lees die getallen dus met die bril
+op, zeker zolang er maar een handvol gebruikers zijn.
 
 Daar komt bij dat een PWA structureel te laag telt: offline openen levert geen
 telling op, en offline werken is juist een kernfunctie van deze app. Ook

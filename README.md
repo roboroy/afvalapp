@@ -68,8 +68,9 @@ browser en gaan nooit ergens heen.
 Het enige dat de app verstuurt is een telling: hoogstens één berichtje per dag
 per apparaat, en één bij het installeren. Daarin staat alleen om wat voor
 gebeurtenis het gaat. Aan de andere kant — een Cloudflare Worker, zie
-[`teller/`](teller/) — wordt niets anders bewaard dan een getal dat met één
-omhooggaat. Geen IP-adres, geen user agent, geen identificatie.
+[`teller/`](teller/) — wordt daar de landcode bij afgeleid uit het IP-adres, en
+worden er getallen opgehoogd: per dag, per land. Het IP-adres zelf wordt niet
+opgeslagen, en er gaat geen user agent of identificatie mee.
 
 Onder **Instellingen → Privacy** staat dit ook in de app zelf, met een
 schakelaar om niet mee te tellen. Zolang er in `js/telemetrie.js` geen
